@@ -1,3 +1,4 @@
 /cnstools
 .DS_Store
 ._*
+*.pyc

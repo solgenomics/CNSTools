@@ -20,7 +20,7 @@ def main(roasted_maf_files,gff3_files,out_foler):
         gff3_to_bed(file,['CDS'],cds_beds[-1])
     #   $bedtools.subtract(seq_beds - alinged_to_cds_bed) -> ncs_beds w/maf_seq_ids
     ncs_beds = []
-    for i in range(len(seq_beds):
+    for i in range(len(seq_beds)):
         ncs_beds.append(out_foler+file.split("/")[-1].split(".bed")[0]+"_masked.bed")
         subprocess.Popen("bedtools subtract -a "+seq_beds[i]+" -b "+cds_beds[i]+" > "+ncs_beds[-1], shell=True)
     #   !bed_maf_parse(ncs_beds,roasted_maf_files) -> ncs_maf w/ncs_seq_ids

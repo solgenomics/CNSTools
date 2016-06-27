@@ -22,7 +22,7 @@ def main(mafFile,outFolder):
         track.display(estimate=False, rate=5)
         for chunk in body:
             if len(chunk)>1:
-                score = float(chunk[0].split("=")[1].strip()) if chunk[0].startswith("a") else 0
+                score = 0
                 s_lines = [[item for item in line.split(" ") if item!=""] for line in chunk[1:] if line.startswith("s")]
                 index+=1
                 for line in s_lines:
@@ -48,5 +48,5 @@ def formatSeq(seq,lLen=70):
 
 def run(argv): 
     mafFile = argv[1]
-    outFolder = argv[2]
+    outFolder = argv[2] if outFolder.endswith("/") else argv[2]+"/"
     main(mafFile,outFolder)

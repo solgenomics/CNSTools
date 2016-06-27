@@ -1,10 +1,15 @@
 #David Lyon    
                                                                                                                                                                                  
 import time
+import sys
+
+last_displayed_progress_tracker = [None]
 
 class Progress_tracker():
     """docstring for Progress"""
-    def __init__(self,name,size,startIt=False):
+    def __init__(self,name,size,startIt=True):
+        global last_displayed_progress_tracker
+        self.last_displayed_progress_tracker = last_displayed_progress_tracker
         self.name = name
         self.size = size
         self.prevStep = None
@@ -35,17 +40,35 @@ class Progress_tracker():
         elif rate:
             self.autoDisplay = False
             self.displayRate = rate
-        out = self.name+': '
+        precentComplete = int((self.prog*100))
+        tRemain = self.parseTime(int(self.timeElapsed/self.prog*(1-self.prog)))
+        if self.last_displayed_progress_tracker[0]!=self: 
+            self.last_displayed_progress_tracker[0] = self
+            sys.stdout.write('\n')
+            sys.stdout.flush()
+        write_string = ""
         if self.steps<self.size:
-            out+=str(int((self.prog*100)))+"%"
+            write_string = '\r%s: %s%s' % (self.name, precentComplete, '%')
             if estimate:
-                out+=" ("+self.parseTime(int(self.timeElapsed/self.prog*(1-self.prog)))+" remaining)"
-            else:
-                out+="..."
+                write_string+= ' (%s remaining)' % (tRemain)
+            write_string+=" "*(70-len(write_string))
         else:
-            out+='Finished'
+            write_string = '\r%s: Finished' % (self.name)
+            write_string+=" "*(70-len(write_string))+'\n'
+        sys.stdout.write(write_string)
+        sys.stdout.flush()
+        # return
+        # out = self.name+': '
+        # if self.steps<self.size:
+        #     out+=str()+"%"
+        #     if estimate:
+        #         out+=" ("++" remaining)"
+        #     else:
+        #         out+="..."
+        # else:
+        #     out+='Finished'
         self.prevDisplay = time.time()
-        print out
+        # print out
     def parseTime(self,seconds):
         if seconds < 60: return str(seconds//1)+"s"
         elif seconds < 3600: return str(seconds//60)+"m."+self.parseTime(seconds%60)

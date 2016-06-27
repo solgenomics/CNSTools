@@ -39,7 +39,7 @@ def main(mafFile,outFile):
         bed_line = [0]*6
         bed_line[0] = line[1]
         bed_line[1] = line[2]
-        bed_line[2] = str(int(line[2])+int(line[3])+1)
+        bed_line[2] = str(int(line[2])+int(line[3]))
         bed_line[3] = "ID="+str(i)
         bed_line[4] = "0"
         bed_line[5] = line[4]

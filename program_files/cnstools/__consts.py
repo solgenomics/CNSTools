@@ -4,7 +4,7 @@ listOfModules = [
     "gff3_to_bed",
     "maf_to_bed",
     "maf_to_fasta",
-    "make_new_maf"
+    "bed_maf_parse"
 ]
 
 dependencies = [

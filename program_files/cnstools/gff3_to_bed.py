@@ -2,7 +2,6 @@
 import progress_tracker as pt
 
 def main(gff3_file,sequence_types,out_file):
-    print sequence_types
     entries = []
     with open(gff3_file) as f:
         for line in f.readlines():
@@ -10,8 +9,6 @@ def main(gff3_file,sequence_types,out_file):
                 list = line.strip().split('\t')
                 if list[2] in sequence_types:
                     entries.append(list)
-    print entries[:10]
-
     bed_lines = []
     for line in entries:
         bed_line = [0]*6
@@ -22,8 +19,6 @@ def main(gff3_file,sequence_types,out_file):
         bed_line[4] = get_score(line[5])
         bed_line[5] = line[6]
         bed_lines.append(bed_line)
-
-    print bed_lines[:10]
 
     with open(out_file,"w") as out:
         out.write("\n".join(["\t".join(line) for line in bed_lines]))

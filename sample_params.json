@@ -1,0 +1,44 @@
+{
+    "maf_file":"data_files/roast2.maf",
+    "seqs": [{
+            "maf_name":"chr1",
+            "gff3_file_name":"data_files/gff3/Mt4.0v1_genome.gff3",
+            "genome_fasta_name":"data_files/genomes/mtruncatula_285_mt4.0_masked.fa"
+        },{
+            "maf_name":"Aradu",
+            "gff3_file_name":"",
+            "genome_fasta_name":"data_files/genomes/Aradu_v1.0_20140908_masked.fa"
+        },{
+            "maf_name":"Araip",
+            "gff3_file_name":"",
+            "genome_fasta_name":"data_files/genomes/Araip_v1.0_20140908.masked.fa"
+        },{
+            "maf_name":"Cajan",
+            "gff3_file_name":"",
+            "genome_fasta_name":"data_files/genomes/Cajan.fa"
+        },{
+            "maf_name":"Cicer",
+            "gff3_file_name":"",
+            "genome_fasta_name":"data_files/genomes/Cicer.fa"
+        },{
+            "maf_name":"Gmax",
+            "gff3_file_name":"",
+            "genome_fasta_name":"data_files/genomes/Gmax_189_masked.fa"
+        },{
+            "maf_name":"Lojap",
+            "gff3_file_name":"",
+            "genome_fasta_name":"data_files/genomes/ljaponicus_masked.fa"
+        },{
+            "maf_name":"Luang",
+            "gff3_file_name":"",
+            "genome_fasta_name":"data_files/genomes/Luang.fa"
+        },{
+            "maf_name":"Pvul",
+            "gff3_file_name":"",
+            "genome_fasta_name":"data_files/genomes/Pvulgaris_218_v1.0_masked.fa"
+        },{
+            "maf_name":"Vigrad",
+            "gff3_file_name":"",
+            "genome_fasta_name":"data_files/genomes/Vigrad.fa"
+        }]
+}

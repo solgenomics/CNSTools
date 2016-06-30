@@ -4,10 +4,8 @@ listOfModules = [
     "gff3_to_bed",
     "maf_to_bed",
     "maf_to_fasta",
-    "bed_maf_parse"
+    "bed_maf_parse",
+    "parse_cns_data"
 ]
 
-dependencies = [
-    "pybedtools",
-    "biopython"
-]
+dependencies = []

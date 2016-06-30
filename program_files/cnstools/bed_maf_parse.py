@@ -1,6 +1,6 @@
 import progress_tracker as pt
 
-def main(bed_file,maf_file,out_file,min_size=1,max_gap_ratio=0.75,max_N_ratio=0.75):
+def main(bed_file,maf_file,out_file,min_size=10,max_gap_ratio=0.75,max_N_ratio=0.75):
 
     bed_entries = []
     with open(bed_file) as f:

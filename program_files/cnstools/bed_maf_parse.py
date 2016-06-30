@@ -1,11 +1,11 @@
 import progress_tracker as pt
 
-def main(bed_file,maf_file,out_file,min_size=1):
+def main(bed_file,maf_file,out_file,min_size=1,max_gap_ratio=0.75,max_N_ratio=0.75):
 
     bed_entries = []
     with open(bed_file) as f:
         filelines = f.readlines()
-        tracker = pt.Progress_tracker("parsing bed file",len(filelines))
+        tracker = pt.Progress_tracker("Parsing .bed",len(filelines))
         tracker.display(estimate=False,rate=2)
         for line in filelines:
             list = line.strip().split("\t")
@@ -29,7 +29,7 @@ def main(bed_file,maf_file,out_file,min_size=1):
     with open(maf_file) as f:
         body = [[]]
         filelines = f.readlines()
-        tracker = pt.Progress_tracker("parsing maf file",len(filelines))
+        tracker = pt.Progress_tracker("Parsing .maf",len(filelines))
         tracker.display(estimate=False,rate=2)
         if filelines[-1].strip()!="":
             filelines.append("")
@@ -56,8 +56,9 @@ def main(bed_file,maf_file,out_file,min_size=1):
         tracker.display()
         del tracker
             
-
-    tracker = pt.Progress_tracker("building new entries",len(bed_entries))
+    s_line_valid = lambda x: x[3]/len(x[6]) > 1-max_gap_ratio \
+                         and no_gap_len(x[6].replace('N',''))/x[3] > 1-max_N_ratio
+    tracker = pt.Progress_tracker("Trimming .maf",len(bed_entries))
     tracker.display(estimate=False,rate=1)
     index = 0
     new_maf_entries = []
@@ -78,23 +79,25 @@ def main(bed_file,maf_file,out_file,min_size=1):
             s_line[2] = s_line[2]+no_gap_len(s_line[6][:front_cut_num])
             s_line[6] = s_line[6][front_cut_num:-back_cut_num] if back_cut_num!=0 else s_line[6][front_cut_num:]
             s_line[3] = no_gap_len(s_line[6])
-        new_maf_entries.append(new_ma)
+        new_ma['s_lines'][:] = [line for line in new_ma['s_lines'] if s_line_valid(line)]
+        if len(new_ma['s_lines'])>1 and max((line[3] for line in new_ma['s_lines'])) >= min_size:
+            new_maf_entries.append(new_ma)
         tracker.step()
     tracker.display()
     del tracker
 
-    out_lines = []
-    for entry in new_maf_entries:
-        out_lines.append(" ".join(entry['a_line'])) 
-        for s_line in entry['s_lines']:
-            out_lines.append(" ".join([str(item) for item in s_line]))
-        out_lines.append("")
-
     with open(out_file,"w") as out:
-        out.write("\n".join(out_lines))
-
-        
-
+        tracker = pt.Progress_tracker("Saving new .maf",len(new_maf_entries))
+        tracker.display(estimate=False,rate=1)
+        out_lines = []
+        for entry in new_maf_entries:
+            out.write(" ".join(entry['a_line'])+"\n") 
+            for s_line in entry['s_lines']:
+                out.write(" ".join([str(item) for item in s_line])+"\n")
+            out.write("\n")
+            tracker.step()
+        tracker.display()
+        del tracker
 
 def no_gap_len(seq): return len(seq[:].replace("-",""))
 

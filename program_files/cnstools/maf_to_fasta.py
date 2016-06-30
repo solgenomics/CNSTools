@@ -8,7 +8,9 @@ def main(mafFile,outFolder):
     with open(mafFile) as f:
         header = []
         body = [[]]
-        for line in f.readlines():
+        lines = f.readlines()
+        track = pt.Progress_tracker("Loading .maf",len(lines),True).display(estimate=False, rate=1)
+        for line in lines:
             stripped = line.strip()
             if stripped.startswith("#"):
                 header.append(stripped)
@@ -16,29 +18,39 @@ def main(mafFile,outFolder):
                 body.append([])
             else:
                 body[-1].append(stripped)
-
-        index = 0
-        track = pt.Progress_tracker("Converting...",len(body),True)
-        track.display(estimate=False, rate=5)
-        for chunk in body:
-            if len(chunk)>1:
-                score = 0
-                s_lines = [[item for item in line.split(" ") if item!=""] for line in chunk[1:] if line.startswith("s")]
-                index+=1
-                for line in s_lines:
-                    newChunk = []
-                    newChunk += [([">",line[1],"alignment#"+str(index),"score="+str(score)]+line[2:6])]
-                    newChunk += formatSeq(line[6])
-                    if newChunk[0][1] not in fastaChunkBySpecies: fastaChunkBySpecies[newChunk[0][1]] = []
-                    fastaChunkBySpecies[newChunk[0][1]].append(newChunk)
             track.step()
         track.display()
+        del track
+
+        index = 0
+        track = pt.Progress_tracker("Converting to .fasta",len(body),True).display(estimate=False, rate=1)
+        for chunk in body:
+            chunkInfo = []
+            if len(chunk)>1:
+                for line in chunk:
+                    if line.startswith('a'):
+                        chunkInfo = line.split()[1:]
+                    if line.startswith('s'):
+                        line = line.split()
+                        newChunk = []
+                        newChunk += [([">",line[1]]+chunkInfo)]
+                        newChunk += formatSeq(line[6])
+                        if newChunk[0][1] not in fastaChunkBySpecies: fastaChunkBySpecies[newChunk[0][1]] = []
+                        fastaChunkBySpecies[newChunk[0][1]].append(newChunk)   
+            track.step()
+        track.display()
+        del track
+
     for i in fastaChunkBySpecies: 
         sp = fastaChunkBySpecies[i]
+        track = pt.Progress_tracker("Saving %s.fasta"%(i),len(fastaChunkBySpecies[i]),True).display(estimate=False, rate=1)
         with open(outFolder+i+".fasta","w") as out:
             for chunk in sp:
                 out.write(chunk[0][0]+"|".join(chunk[0][1:])+"\n")
                 out.write("\n".join(chunk[1:])+"\n")
+                track.step()
+        track.display()
+        del track
 
 
 def formatSeq(seq,lLen=70):

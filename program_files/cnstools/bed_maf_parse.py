@@ -1,6 +1,6 @@
 import progress_tracker as pt
 
-def main(bed_file,maf_file,out_file,min_size=10,max_gap_ratio=0.75,max_N_ratio=0.75):
+def main(bed_file,maf_file,out_file,min_size=10,max_gap_ratio=0.5,max_N_ratio=0.5):
 
     bed_entries = []
     with open(bed_file) as f:
@@ -56,8 +56,6 @@ def main(bed_file,maf_file,out_file,min_size=10,max_gap_ratio=0.75,max_N_ratio=0
         tracker.display()
         del tracker
             
-    s_line_valid = lambda x: x[3]/len(x[6]) > 1-max_gap_ratio \
-                         and no_gap_len(x[6].replace('N',''))/x[3] > 1-max_N_ratio
     tracker = pt.Progress_tracker("Trimming .maf",len(bed_entries))
     tracker.display(estimate=False,rate=1)
     index = 0
@@ -79,7 +77,7 @@ def main(bed_file,maf_file,out_file,min_size=10,max_gap_ratio=0.75,max_N_ratio=0
             s_line[2] = s_line[2]+no_gap_len(s_line[6][:front_cut_num])
             s_line[6] = s_line[6][front_cut_num:-back_cut_num] if back_cut_num!=0 else s_line[6][front_cut_num:]
             s_line[3] = no_gap_len(s_line[6])
-        new_ma['s_lines'][:] = [line for line in new_ma['s_lines'] if s_line_valid(line)]
+        new_ma['s_lines'][:] = [line for line in new_ma['s_lines'] if s_line_valid(line,max_gap_ratio,max_N_ratio)]
         if len(new_ma['s_lines'])>1 and max((line[3] for line in new_ma['s_lines'])) >= min_size:
             new_maf_entries.append(new_ma)
         tracker.step()
@@ -98,6 +96,12 @@ def main(bed_file,maf_file,out_file,min_size=10,max_gap_ratio=0.75,max_N_ratio=0
             tracker.step()
         tracker.display()
         del tracker
+
+def s_line_valid(x,max_gap_ratio,max_N_ratio):
+    if x[3]/float(len(x[6])) > 1-max_gap_ratio and no_gap_len(x[6][:].replace('N',''))/float(x[3]) > 1-max_N_ratio:
+        return True
+    else : return False
+
 
 def no_gap_len(seq): return len(seq[:].replace("-",""))
 

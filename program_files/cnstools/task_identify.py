@@ -1,11 +1,12 @@
 import progress_tracker as pt
 import subprocess
 import json
+import os
 
-from __consts import listOfModules
-for module in listOfModules:
-    if module!="identify":
-        exec "from "+module+" import main as " + module
+from __init__ import task_name_pairs as listOfModules
+for module,name in listOfModules:
+    if name!="identify":
+        exec "from "+module+" import main as " + name
         
 
 def main(data,out_folder,num_threads):
@@ -139,34 +140,35 @@ def main(data,out_folder,num_threads):
             tracker.step().display()
         del tracker
 
+    #!parse_cns_data(data,out) -> cns_assoc_info w/cns_seq_ids
+    header_print("Parsing association data.")
+    if not 'final_results_folder' in data:
+        data['final_results_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_results/"
+        process = subprocess.Popen("mkdir "+data['final_results_folder'], shell=True)
+        process.wait()
+        parse_cns_data(data,data['final_results_folder'])
+
     with open(out_folder+"data.json","w") as out:
         out.write(json.dumps(data, sort_keys=True, indent=4, separators=(',', ': ')))
 
-    #!parse_assoc_info(data,out) -> cns_assoc_info w/cns_seq_ids
-    header_print("Parsing association data.")
-    if True or not 'final_results' in data:
-        data['final_results'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_results.maf"
-        parse_cns_data(data,data['final_results'])
+    #make_figures(data['final_results_folder'])
     #OUTPUT:
     #    cns alignment from cns_maf
     #    location in each species from cns_locs
     #    closest genes and distance for each species from cns_assoc_info
     #    catagory from cns_assoc_info
-    header_print("Finished! Results in:%s"%data['final_results'])
+    header_print("Finished! Results in:%s"%data['final_results_folder'])
 
 def header_print(header):
     wall = "-"*70#*(len(header)+2)
     print "\n%s\n %s \n%s\n" % (wall,header,wall)
     return
 
-def run(argv):
+def file_run(json_file,out_folder,num_threads_in):
     config = None
-    with open(argv[1]) as intructionJSON:
+    with open(json_file) as intructionJSON:
         config = json.load(intructionJSON)
-    out_folder = argv[2] if argv[2].endswith("/") else argv[2]+"/"
-    num_threads = int(argv[3])
+    if not out_folder.endswith("/"):
+        out_folder+="/"
+    num_threads = int(num_threads_in)
     main(config,out_folder,num_threads)
-
-if __name__ == '__main__':
-    import sys
-    run(sys.argv)

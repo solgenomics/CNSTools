@@ -58,7 +58,7 @@ def formatSeq(seq,lLen=70):
     lines = [nogaps[i:i+lLen] for i in xrange(0,len(nogaps),lLen)]
     return lines
 
-def run(argv): 
-    mafFile = argv[1]
-    outFolder = argv[2] if outFolder.endswith("/") else argv[2]+"/"
+def file_run(mafFile,outFolder):
+    if not outFolder.endswith("/"):
+        outFolder+="/"
     main(mafFile,outFolder)

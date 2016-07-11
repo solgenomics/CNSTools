@@ -121,8 +121,5 @@ def load_a_line(line):
     arr = [item for item in line.strip().split() if item!=""]
     return arr
         
-def run(argv): 
-    bed_file = argv[1]
-    maf_file = argv[2]
-    out_file = argv[3]
+def file_run(bed_file,maf_file,out_file):
     main(bed_file,maf_file,out_file)

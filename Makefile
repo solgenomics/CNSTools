@@ -1,11 +1,28 @@
 
-PROGRAM_DIRECTORIES = $(shell find ./program_files/ -type d)
-PROGRAM_FILES = $(shell find ./program_files/ -type f -name '*')
+SOURCE_DIRECTORIES = $(shell find ./source/ -type d)
+SOURCE_FILES = $(shell find ./source/ -type f -name '*')
+DOC_DIRECTORIES = $(shell find ./docs/ -type d)
+DOC_FILES = $(shell find ./docs/ -type f -name '*')
+DOC_PATH_CHANGE_COMMAND = import os; import sys; sys.path.insert(0, os.path.abspath(\"../source\"));
 
-all: cnstools
+all: cnstools docs
 
-cnstools: ./program_files $(PROGRAM_DIRECTORIES) $(PROGRAM_FILES)
-	cd program_files; zip -r ../cnstools.zip *; cd ..
-	echo '#!/usr/bin/env python' | cat - cnstools.zip > cnstools
-	chmod +x cnstools
-	rm cnstools.zip
+cnstools: macwash_source ./source $(SOURCE_DIRECTORIES) $(SOURCE_FILES)
+	rm ./build/cnstools
+	cp -r ./source/cnstools ./build/cnstools
+	find ./build/ -name "*.pyc" -delete
+	cd ./build/cnstools/; zip -r ../cnstools.zip *; cd ../..
+	rm -r ./build/cnstools
+	echo '#!/usr/bin/env python' | cat - ./build/cnstools.zip > ./build/cnstools
+	chmod +x ./build/cnstools
+	rm ./build/cnstools.zip
+
+macwash_source: ./source $(SOURCE_DIRECTORIES) $(SOURCE_FILES)
+	find ./source/ -name "._*" -delete
+	find ./source/ -name ".DS_Store" -delete
+
+docs: macwash_source $(DOC_DIRECTORIES) $(DOC_FILES) $(SOURCE_DIRECTORIES) $(SOURCE_FILES)
+	mkdir -p ./docs
+	sphinx-apidoc -F -e -o ./docs ./source -H CNStools
+	sed -i "/use\ os.path.abspath/c\$(DOC_PATH_CHANGE_COMMAND)" ./docs/conf.py
+	cd docs; make html; cd ..

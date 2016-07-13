@@ -9,8 +9,7 @@ for module in cnstools.__all__:
 
 def main():
     """runs the task module given in the first cmdline arguemnt with the cmdline arguements that follow as arguements"""
-    print program_run_dict
-    print (sys.argv[2:])
+    cnstools.identify.header_print(sys.argv[1])
     program_run_dict[sys.argv[1].strip()](*(sys.argv[2:]))
   
 if __name__ == '__main__':

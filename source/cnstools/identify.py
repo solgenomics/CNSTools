@@ -3,10 +3,10 @@ import subprocess
 import json
 import os
 
-from __init__ import task_name_pairs as listOfModules
-for module,name in listOfModules:
+from __init__ import names as listOfModules
+for name in listOfModules:
     if name!="identify":
-        exec "from "+module+" import main as " + name
+        exec "from "+name+" import main as " + name
         
 
 def main(data,out_folder,num_threads):

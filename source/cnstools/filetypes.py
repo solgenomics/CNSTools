@@ -1,11 +1,15 @@
+"""Module which contains classes for storing the data for each filetype used in cnstools. The filetype classes also have some conversion functions for changing file formats."""
 from abc import ABCMeta, abstractmethod
 from progress_tracker import Progress_tracker
 
 class Filetype(object):
-    """"""
+    """Abstract parent class of all of the filetype functions. The __init__ function here should be called by each subclass."""
     __metaclass__ = ABCMeta
+
     Entry_class = None
+
     def __init__(self,file_name=None,file_object=None,lines=None):
+        """Accepts a file object, file name, or list of line strings. Sets up an entry list (self.entries) and then calls the abstract add_lines() function with a list of lines to be parsed into entrys."""
         self.entries = []
         if lines:
             self.add_lines(lines)
@@ -16,6 +20,7 @@ class Filetype(object):
                 self.add_lines(file.readlines())
 
     def add_entry(self,*args,**kwargs): 
+        """Creates a new entry by passing along the arguements to instantiate the Entry_class then appends that new instance to self.entries. Entry_class must be defined in the subclass for the add_entry Filetype function to work, otherwise it will return None.""" 
         if self.Entry_class:
             new_entry = self.Entry_class(*args,**kwargs) 
             self.entries.append(new_entry)
@@ -24,9 +29,13 @@ class Filetype(object):
             return None
 
     @abstractmethod
-    def add_lines(self,file): pass
+    def add_lines(self,file): 
+        """Abstract. Should take a list of line strings and parse them into instances of the Entry_class then append them to self.entries"""
+        pass
     @abstractmethod
-    def get_lines(self): pass
+    def get_lines(self): 
+        """Abstract. Should return the entry data formatted as a list of line strings"""
+        pass
 
 class Cns_sequence():
     def __init__(self,genome,type,dist,loc_chrom,closest_gene,start,stop,gene_start,gene_stop,sequence,cns_ID=None):
@@ -84,6 +93,7 @@ class Cns(Filetype):
     def get_lines(self):
         return [line for entry in self.entries for line in entry.get_lines()]
     def to_fasta(self,sequences=False):
+        """converts the .cns data to multiple .fasta data classes and returns a dict with sequence origin names as keys"""
         fastas = {}
         tracker = Progress_tracker("Converting to .fasta files",len(self.entries)).display(estimate=False,rate=0.5)
         for entry in self.entries:

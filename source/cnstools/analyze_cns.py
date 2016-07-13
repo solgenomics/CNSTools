@@ -4,66 +4,63 @@ import scipy as sp
 import matplotlib as mpl
 mpl.use('SVG')
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 def main(do_list,cns):
 
     if "count" in do_list: print len("%s CNSs" % cns.entries)
 
     if "types" in do_list:
-        seq_type_count = {}
-        paired_seq_type = {}
-        entry_counted = 0
+        type_list = ["intergenic","intronic","downstream","upstream"]
+        type_count_dict = {key:0 for key in type_list}
+        type_exist_dict = {key:0 for key in type_list}
+        type_prob_dict = {key:0 for key in type_list}
+        type_conditional_count_dict = {(key1,key2):0 for key1 in type_list for key2 in type_list}
+        type_conditional_prob_dict = {(key1,key2):0 for key1 in type_list for key2 in type_list}
+        numGenoms = 10
         for entry in cns.entries:
-            type_list = [seq.type for seq in entry.get_seqs() if seq.type!=None]
-            types = tuple(set(type_list))
-            if len(types)>0:
-                entry_counted+=1
-                for i in range(len(types)):
-                    if not types[i] in seq_type_count: 
-                        seq_type_count[types[i]] = 1
-                    else: 
-                        seq_type_count[types[i]]+= 1
-                    exclusion_list = type_list[:]
-                    exclusion_list.remove(types[i])
-                    exclusion_set = tuple(set(exclusion_list))
-                    for j in range(len(exclusion_set)):
-                        key = tuple(sorted([types[i],exclusion_set[j]]))
-                        if not key in paired_seq_type: 
-                            paired_seq_type[key] = 1
-                        else: 
-                            paired_seq_type[key]+= 1
-                    type_list[:] = [t for t in type_list if t!=types[i]]
+            entry_count_dict = {}
+            entry_prob_dict = {}
+            entry_conditional_counts = {}
+            for seq in entry.get_seqs():
+                if seq.type!=None:
+                    if seq.type not in entry_count_dict: 
+                        entry_count_dict[seq.type] = 0
+                    entry_count_dict[seq.type]+=1
+            entry_types = entry_count_dict.keys()
+            for t in set(entry_types):
+                type_exist_dict[t]+=1
+            for i in range(len(entry_types)):
+                for j in range(len(entry_types)):
+                    key = (entry_types[i],entry_types[j])
+                    if key not in entry_conditional_counts: 
+                        entry_conditional_counts[key] = 0
+                    entry_conditional_counts[key]+= entry_count_dict[key[1]] - (1 if key[0]==key[1] else 0)
+            for key in entry_count_dict:
+                type_count_dict[key]+=entry_count_dict[key]
+                entry_prob_dict[key] = entry_count_dict[key]/float(numGenoms)
+                type_prob_dict[key]+=entry_prob_dict[key]
+            for key in entry_conditional_counts:
+                type_conditional_count_dict[key]+=entry_conditional_counts[key]
+                type_conditional_prob_dict[key]+=entry_conditional_counts[key]/float(numGenoms-1)
 
-        seq_type_ratio = {key:seq_type_count[key]/float(entry_counted) for key in seq_type_count}
+        type_prob_dict = {key:type_prob_dict[key]/float(len(cns.entries)) for key in type_prob_dict}
+        type_conditional_prob_dict = {key:type_conditional_prob_dict[key]/type_exist_dict[key[0]] for key in type_conditional_prob_dict}
 
-        paired_seq_type_ratio = {key:paired_seq_type[key]/float(entry_counted) for key in paired_seq_type}
+        conditional_prob_array = [[0]*len(type_list) for i in range(len(type_list))]
+        for i in range(len(type_list)):
+                for j in range(len(type_list)):
+                    key = (type_list[i],type_list[j])
+                    probability = type_conditional_prob_dict[key]
+                    conditional_prob_array[i][j] = probability
 
-        type_to_index = {}
-        index_to_type = {}
-        i = 0
-        for key in seq_type_ratio:
-            type_to_index[key] = i
-            index_to_type[i] = key
-            i+=1
-
-        conditional_prob_array = [[0]*len(type_to_index) for i in range(len(type_to_index))]
-        for two in paired_seq_type_ratio:
-            for pair in (two,two[::-1]):
-                probability = paired_seq_type_ratio[two]/seq_type_ratio[pair[1]]
-                p0_index = type_to_index[pair[0]]
-                p1_index = type_to_index[pair[1]]
-                conditional_prob_array[p0_index][p1_index] = probability
-
-        print "probability that a CNS is of type on at least one seq", seq_type_ratio
-        print "probability of type given type", paired_seq_type_ratio
-
-        print "conditional probability of type given type, normalized by type freq"
+        print "Conditional probs"
+        print ("%s %-10s " % (i,"")) + " ".join(['%s'%(int(val)) for val in range(len(conditional_prob_array))])
         for i in range(len(conditional_prob_array)):
             row = conditional_prob_array[i]
-            print ("%s %-10s " % (i,index_to_type[i])) + " ".join(['%3s'%(int(val*100)) for val in row])
+            print ("%s %-10s " % (i,type_list[i])) + " ".join(['%s'%(val) for val in row])
 
-        labels = [index_to_type[i] for i in range(len(index_to_type))]
-        heatmap(conditional_prob_array,"seq_conditional_heatmap.svg",labels,labels)
+        heatmap(conditional_prob_array,"seq_conditional_heatmap.svg",type_list,type_list)
 
     if "len_dist" in do_list:
         dists = []
@@ -117,10 +114,10 @@ def heatmap_histogram(data,out_file_path):
 
 def heatmap(data,out_file_path,xlabels=None,ylabels=None):
     plt.clf()
-    plt.imshow(data, extent=[0,len(data),0,len(data[0])], aspect=1.0, cmap=plt.cm.inferno, interpolation='nearest')
+    im = plt.imshow(data, extent=[0,len(data),0,len(data[0])], aspect=1.0, cmap=cm.hot, interpolation='nearest', vmin=0, vmax=0.3)
     plt.xlabel('Given:')
     plt.ylabel('Probability of:')
-    plt.colorbar()
+    plt.colorbar(im)
     ax = plt.gca()
     if xlabels:
         plt.xticks([i+0.5 for i in range(len(xlabels))], xlabels)
@@ -172,11 +169,11 @@ def multi_bar_graph(dict_dict,out_file_path):
 
 def file_run(cns_file,*args): 
 
-    do_list = list(*args)
-
+    do_list = list(args)
+    print do_list
     cns = Cns()
     with open(cns_file) as file:
-        cns.add_lines(file.readlines())
+        cns.add_lines(file.readlines()[:])
 
     main(do_list,cns)
 

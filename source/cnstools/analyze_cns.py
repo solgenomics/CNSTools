@@ -21,17 +21,12 @@ def main(cns,task_list):
     """
     if "count" in task_list: print len("%s CNSs" % cns.entries)
 
-<<<<<<< HEAD
-    if "types" in do_list:
+    if "types" in task_list:
         list_of_cns_types = ["intergenic","intronic","downstream","upstream"]
         numGenoms = 2
 
         type_list=list_of_cns_types+["unknown","DNE"]
         # list_of_cns_types = type_list
-=======
-    if "types" in task_list:
-        type_list = ["intergenic","intronic","downstream","upstream"]
->>>>>>> 063b650e67597b0ef6246ab8f1b3e79a9c6cedef
         type_count_dict = {key:0 for key in type_list}
         type_pair_count_dict = {(key1,key2):0 for key1 in type_list for key2 in type_list}
 
@@ -76,12 +71,7 @@ def main(cns,task_list):
             row = conditional_prob_array[i]
             print ("%s %-10s " % (i,list_of_cns_types[i])) + " ".join(['%14s'%(val) for val in row])
 
-
-<<<<<<< HEAD
-        heatmap(conditional_prob_array,"seq_conditional_heatmap.svg","type X","type Y",list_of_cns_types,list_of_cns_types,"Probability that a CNS is known to be of type X on any genome, given that it is known to be type Y on one.")
-=======
-        _heatmap(conditional_prob_array,"seq_conditional_heatmap.svg",type_list,type_list)
->>>>>>> 063b650e67597b0ef6246ab8f1b3e79a9c6cedef
+        _heatmap(conditional_prob_array,"seq_conditional_heatmap.svg","type X","type Y",list_of_cns_types,list_of_cns_types,"Probability that a CNS is known to be of type X on any genome, given that it is known to be type Y on one.")
 
     if "len_dist" in task_list:
         dists = []
@@ -133,11 +123,7 @@ def _heatmap_histogram(data,out_file_path):
     plt.hexbin(data[0], data[1], cmap=plt.cm.jet, norm=mpl.colors.LogNorm())
     plt.savefig(out_file_path, bbox_inches='tight')
 
-<<<<<<< HEAD
-def heatmap(data,out_file_path,xName="",yName="",xlabels=None,ylabels=None,plt_title=""):
-=======
-def _heatmap(data,out_file_path,xlabels=None,ylabels=None):
->>>>>>> 063b650e67597b0ef6246ab8f1b3e79a9c6cedef
+def _heatmap(data,out_file_path,xName="",yName="",xlabels=None,ylabels=None,plt_title=""):
     plt.clf()
     biggest = max((val for row in data for val in row))
     ax = plt.gca()

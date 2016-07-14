@@ -7,5 +7,5 @@ def main(gff3_file,sequence_types,out_file):
         out.write("\n".join(bed.get_lines()))
 
 def file_run(gff3_file,out_file,*args): 
-    sequence_types = list(*args)
+    sequence_types = list(args) if len(args)>0 else None
     main(gff3_file,sequence_types,out_file)

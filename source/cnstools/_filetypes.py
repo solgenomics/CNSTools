@@ -2,7 +2,7 @@
 from abc import ABCMeta, abstractmethod
 from _progress_tracker import Progress_tracker
 
-class Filetype(object):
+class Serial_Filetype(object):
     """Abstract parent class of all of the filetype functions. The __init__ function here should be called by each subclass."""
     __metaclass__ = ABCMeta
 
@@ -20,13 +20,17 @@ class Filetype(object):
                 self.add_lines(file.readlines())
 
     def add_entry(self,*args,**kwargs): 
-        """Creates a new entry by passing along the arguements to instantiate the Entry_class then appends that new instance to self.entries. Entry_class must be defined in the subclass for the add_entry Filetype function to work, otherwise it will return None.""" 
+        """Creates a new entry by passing along the arguements to instantiate the Entry_class then appends that new instance to self.entries. Entry_class must be defined in the subclass for the add_entry Serial_Filetype function to work, otherwise it will return None.""" 
         if self.Entry_class:
             new_entry = self.Entry_class(*args,**kwargs) 
             self.entries.append(new_entry)
             return new_entry
         else: 
             return None
+
+    def save_file(self,save_name):
+        with open(save_name,"w") as out:
+            out.write("\n".join(self.get_lines()))
 
     @abstractmethod
     def add_lines(self,file): 
@@ -37,7 +41,7 @@ class Filetype(object):
         """Abstract. Should return the entry data formatted as a list of line strings"""
         pass
 
-class Cns_sequence():
+class Cns_sequence(object):
     def __init__(self,genome,type,dist,loc_chrom,closest_gene,start,stop,gene_start,gene_stop,sequence,cns_ID=None):
         self.cns_ID = cns_ID
         self.genome = genome
@@ -56,7 +60,7 @@ class Cns_sequence():
     def duplicate(self):
         return Cns_sequence(self.genome,self.type,self.dist,self.loc_chrom,self.closest_gene,self.start,self.stop,self.gene_start,self.gene_stop,self.sequence,cns_ID=self.cns_ID)
 
-class Cns_entry():
+class Cns_entry(object):
     def __init__(self,cns_ID):
         self.cns_ID = cns_ID
         self.sequences = {}
@@ -75,7 +79,7 @@ class Cns_entry():
         return [seq.get_line() for seq in seqs]
 
 
-class Cns(Filetype):
+class Cns(Serial_Filetype):
     Entry_class = Cns_entry
     def add_lines(self,lines):
         ID=None
@@ -108,7 +112,7 @@ class Cns(Filetype):
 
 
 
-class Bed6_entry():
+class Bed6_entry(object):
     """0-based"""
     def __init__(self, chrom, chromStart, chromEnd, name=None, score=None, strand=None):
         #super(Bed6_entry, self).__init__()
@@ -125,14 +129,14 @@ class Bed6_entry():
         strs = (str(i) if i!=None else '.' for i in (self.chrom, self.chromStart, self.chromEnd, self.name, self.score, self.strand))
         return "\t".join(strs)
 
-class Bed6(Filetype):
+class Bed6(Serial_Filetype):
     """0-based"""
     Entry_class = Bed6_entry
     def add_lines(self,lines):
         tracker = Progress_tracker("Parsing 6 column .bed",len(lines)).display(estimate=False,rate=0.5)
         for line in lines:
             fields = line.strip().split('\t')
-            if len(fields>1):
+            if len(fields)>1:
                 if len(fields)<6:
                     fields.append([None]*(6-len(fields)))
                 fields[:] = [item if item!='.' else None for item in fields]
@@ -146,7 +150,7 @@ class Bed6(Filetype):
             lines.append(entry.get_line())
         return lines
 
-class Bed13_entry():
+class Bed13_entry(object):
     def __init__(self,*fields):
         if len(fields)!=13:
             raise Exception("not 13 fields")
@@ -156,7 +160,7 @@ class Bed13_entry():
     def get_line(self):
         return "\t".join([self.first.get_line(),self.second.get_line(),str(self.score)])
 
-class Bed13(Filetype):
+class Bed13(Serial_Filetype):
     """0-based"""
     Entry_class = Bed13_entry
     def add_lines(self,lines):
@@ -192,7 +196,7 @@ class BlastF6_entry(object):
     def get_line(self):
         return "\t".join([str(item) for item in (self.query,self.target,self.identity,self.length,self.mismatches,self.gapOpens,self.queryStart,self.queryEnd,self.targetStart,self.targetEnd,self.eVal,self.bitScore)])
 
-class BlastF6(Filetype):
+class BlastF6(Serial_Filetype):
     """1-based"""
     Entry_class = BlastF6_entry
     def add_lines(self,lines):
@@ -246,15 +250,16 @@ class Gff3_entry(object):
     def get_line(self):
         return "\t".join([str(item) for item in (self.seqid,self.source,self.type,self.start,self.end,self.score,self.strand,self.phase,self.attributes)])
 
-class Gff3(Filetype):
+class Gff3(Serial_Filetype):
     """1-based"""
     Entry_class = Gff3_entry
     def add_lines(self,lines):
         tracker = Progress_tracker("Parsing .gff3",len(lines)).display(estimate=False,rate=0.5)
         for line in lines:
-            fields = line.strip().split('\t')
-            if (len(fields)==9):
-                self.entries.append(Gff3_entry(*fields))
+            if not line.startswith('#'):
+                fields = line.strip().split('\t')
+                if (len(fields)==9):
+                    self.entries.append(Gff3_entry(*fields))
             tracker.step()
         tracker.display()
         del tracker
@@ -282,6 +287,19 @@ class Gff3(Filetype):
         tracker.display()
         del tracker
         return new_bed
+
+class Gff2(Gff3):
+    def add_lines(self,lines):
+        tracker = Progress_tracker("Parsing .gff3",len(lines)).display(estimate=False,rate=0.5)
+        for line in lines:
+            if not line.startswith('#'):
+                fields = [i for i in line.strip().split('\t') if i!='']
+                if (len(fields)==8):
+                    fields = fields[:2]+["?"]+fields[2:] #unknown type!
+                    self.entries.append(Gff3_entry(*fields))
+            tracker.step()
+        tracker.display()
+        del tracker
 
 class Maf_sequence(object):
     def __init__(self,src,start,size,strand,srcSize,text,metadata=None):
@@ -326,7 +344,7 @@ class Maf_entry(object):
             lines+=sequence.get_lines()
         return lines
 
-class Maf(Filetype):
+class Maf(Serial_Filetype):
     """0-based"""
     Entry_class = Maf_entry
     def add_lines(self,lines):
@@ -372,7 +390,7 @@ class Fasta_entry(object):
     def get_lines(self):
         return [">"+self.description]+[self.sequence[i:i+70] for i in range(0,len(self.sequence),70)]
 
-class Fasta(Filetype):
+class Fasta(Serial_Filetype):
     """docstring for Fasta"""
     Entry_class = Fasta_entry
     def add_lines(self,lines):
@@ -393,6 +411,114 @@ class Fasta(Filetype):
             lines+= entry.get_lines()
         return lines
 
+class Tomtom_match(object):
+    def __init__(self,query_id,target_id,optimal_offset,p_value,e_value,q_value,overlap,query_consensus,target_consensus,orientation):
+        self.query_id = query_id
+        self.target_id = target_id
+        self.optimal_offset = optimal_offset
+        self.p_value = p_value
+        self.e_value = e_value
+        self.q_value = q_value
+        self.overlap = overlap
+        self.query_consensus = query_consensus
+        self.target_consensus = target_consensus
+        self.orientation = orientation
+    def get_line(self):
+        return "\t".join((self.query_id,self.target_id,self.optimal_offset,self.p_value,self.e_value,self.q_value,self.overlap,self.query_consensus,self.target_consensus,self.orientation))
 
+class Tomtom_entry(object):
+    def __init__(self,lines):
+        lists = [line.split("\t") for line in lines]
+        self.query_id = lists[0][0]
+        self.query_consensus = lists[0][7]
+        self.matches = [Tomtom_match(*list) for list in lists]
+    def get_lines(self):
+        return [match.get_line() for match in self.matches]
+
+class Tomtom(Serial_Filetype):
+    """docstring for Tomtom"""
+    Entry_class = Tomtom_entry
+    def add_lines(self,lines):
+        lines = [line.strip() for line in lines]
+        paragraphs = []
+        self.header = []
+        last_ID = None
+        for line in lines:
+            if not line.startswith("#"):
+                this_ID = line[:line.find('\t')]
+                if this_ID!=last_ID:
+                    last_ID = this_ID
+                    paragraphs.append([])
+                if not this_ID==None:
+                    paragraphs[-1].append(line)
+            else:
+                self.header.append(line)
+        for paragraph in paragraphs:
+            if(len(paragraph)>0):
+                self.entries.append(Tomtom_entry(paragraph))
+    def get_lines(self):
+        lines = self.header
+        for entry in self.entries:
+            lines+= entry.get_lines()
+        return lines
+
+class Meme_v_4_entry(object):
+    def __init__(self,lines):
+        start_index = 0
+        while not lines[start_index].startswith('MOTIF'):
+            start_index+=1
+        idList = lines[start_index].split()
+        self.identifier = idList[1]
+        self.alt_name = idList[2]
+        self.lines = lines
+    def get_lines(self):
+        return self.lines
+
+class Meme_v_4(Serial_Filetype):
+    Entry_class = Meme_v_4_entry
+    def __init__(self,*args,**kwargs):
+        if not hasattr(self,"entry_dict"):
+            self.entry_dict = {}
+        if not hasattr(self,"header"):
+            self.header = []
+        super(Meme_v_4, self).__init__(*args,**kwargs)
+    def add_lines(self,lines):
+        lines = [line.strip() for line in lines]
+        header_end = 0
+        while not lines[header_end].startswith('MOTIF'):
+            header_end+=1
+        self.header+= lines[:header_end]
+        paragraphs = []
+        first_found = False
+        for line in lines[header_end:]:
+            if line.startswith('MOTIF'):
+                paragraphs.append([])
+                first_found = True
+            if first_found:
+                paragraphs[-1].append(line)
+        for paragraph in paragraphs:
+            if(len(paragraph)>1):
+                self.entries.append(self.Entry_class(paragraph))
+                self.entry_dict[self.entries[-1].identifier] = self.entries[-1]
+    def get_lines(self):
+        lines = self.header
+        for entry in self.entries:
+            lines+= entry.get_lines()
+        return lines
+    def add_entry(self,lines=None,entry=None): 
+        if entry!=None:
+            self.entries.append(entry)
+        elif lines!=None:
+            self.entries.append(self.Entry_class(lines))
+        else:
+            return None
+        self.entry_dict[self.entries[-1].identifier] = self.entries[-1]
+        return self.entries[-1]
+    def lookup(self,identifier):
+        if identifier in self.entry_dict:
+            return self.entry_dict[identifier]
+        else:
+            return None
+        
 
         

@@ -8,11 +8,13 @@ names = [
     "bed_maf_parse",
     "blast_to_bed",
     "cns_to_fasta",
+    "gff2_to_bed",
     "gff3_to_bed",
     "identify",
     "maf_to_bed",
     "maf_to_fasta",
     "parse_cns_data",
+    "run_tomtom_and_fimo"
 ]
 __all__ = names
 for name in names:

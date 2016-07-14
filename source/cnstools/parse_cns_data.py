@@ -1,5 +1,5 @@
-import progress_tracker as pt
-from filetypes import Maf, Cns, Bed13
+import _progress_tracker as pt
+from _filetypes import Maf, Cns, Bed13
 
 def main(data,out_folder):
 

@@ -1,4 +1,7 @@
-from filetypes import Cns
+"""A script for analyzing the contents of a .cns file or :class:`.Cns` object.
+"""
+
+from _filetypes import Cns
 import numpy as np
 import scipy as sp
 import matplotlib as mpl
@@ -7,16 +10,28 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import matplotlib.colors as colors
 
-def main(do_list,cns):
 
-    if "count" in do_list: print len("%s CNSs" % cns.entries)
+def main(cns,task_list):
+    """This function runs the main workflow for the script.
 
+    :param cns: The :class:`.Cns` object to be used in the program.
+    :param  list[str] task_list: A list of tasks to perform, options are ``["count","types","len_dist","nucleotide_freq"]``
+    :type cns: :class:`.Cns`
+    :returns:  `None`
+    """
+    if "count" in task_list: print len("%s CNSs" % cns.entries)
+
+<<<<<<< HEAD
     if "types" in do_list:
         list_of_cns_types = ["intergenic","intronic","downstream","upstream"]
         numGenoms = 2
 
         type_list=list_of_cns_types+["unknown","DNE"]
         # list_of_cns_types = type_list
+=======
+    if "types" in task_list:
+        type_list = ["intergenic","intronic","downstream","upstream"]
+>>>>>>> 063b650e67597b0ef6246ab8f1b3e79a9c6cedef
         type_count_dict = {key:0 for key in type_list}
         type_pair_count_dict = {(key1,key2):0 for key1 in type_list for key2 in type_list}
 
@@ -62,9 +77,13 @@ def main(do_list,cns):
             print ("%s %-10s " % (i,list_of_cns_types[i])) + " ".join(['%14s'%(val) for val in row])
 
 
+<<<<<<< HEAD
         heatmap(conditional_prob_array,"seq_conditional_heatmap.svg","type X","type Y",list_of_cns_types,list_of_cns_types,"Probability that a CNS is known to be of type X on any genome, given that it is known to be type Y on one.")
+=======
+        _heatmap(conditional_prob_array,"seq_conditional_heatmap.svg",type_list,type_list)
+>>>>>>> 063b650e67597b0ef6246ab8f1b3e79a9c6cedef
 
-    if "len_dist" in do_list:
+    if "len_dist" in task_list:
         dists = []
         lens = []
         typeLens = {}
@@ -77,10 +96,10 @@ def main(do_list,cns):
                     if seq.type not in typeLens: typeLens[seq.type] = []
                     typeLens[seq.type].append(seq.stop-seq.start)
 
-        heatmap_histogram((dists,lens),"dist_len_heatmap.svg")
-        histogram(typeLens,"type_len_histogram.svg")
+        _heatmap_histogram((dists,lens),"dist_len_heatmap.svg")
+        _histogram(typeLens,"type_len_histogram.svg")
 
-    if "nucleotide_freq" in do_list:
+    if "nucleotide_freq" in task_list:
         nucs = ('A','T','C','G')
         typefreqs = {}
         for entry in cns.entries:
@@ -95,9 +114,9 @@ def main(do_list,cns):
             for nuc in nucs:
                 typefreqs[t][nuc] = typefreqs[t][nuc]/float(typefreqs[t]['__denom'])
             del typefreqs[t]['__denom']
-        multi_bar_graph(typefreqs,"nucleotide_freq_graph.svg")
+        _multi_bar_graph(typefreqs,"nucleotide_freq_graph.svg")
 
-def scatter(data,out_file_path):
+def _scatter(data,out_file_path):
     plt.clf()
     twoDArr = data
     unzipped = zip(*twoDArr)
@@ -107,14 +126,18 @@ def scatter(data,out_file_path):
     plt.grid(True)
     plt.savefig(out_file_path, bbox_inches='tight')
 
-def heatmap_histogram(data,out_file_path):
+def _heatmap_histogram(data,out_file_path):
     plt.clf()
     plt.xlabel('')
     plt.ylabel('')
     plt.hexbin(data[0], data[1], cmap=plt.cm.jet, norm=mpl.colors.LogNorm())
     plt.savefig(out_file_path, bbox_inches='tight')
 
+<<<<<<< HEAD
 def heatmap(data,out_file_path,xName="",yName="",xlabels=None,ylabels=None,plt_title=""):
+=======
+def _heatmap(data,out_file_path,xlabels=None,ylabels=None):
+>>>>>>> 063b650e67597b0ef6246ab8f1b3e79a9c6cedef
     plt.clf()
     biggest = max((val for row in data for val in row))
     ax = plt.gca()
@@ -138,7 +161,7 @@ def heatmap(data,out_file_path,xName="",yName="",xlabels=None,ylabels=None,plt_t
                 #bbox = dict(boxstyle = 'square,pad=0.5', fc = 'white', alpha = 0.3))
     plt.savefig(out_file_path, bbox_inches='tight')
 
-def histogram(data_dict,out_file_path):
+def _histogram(data_dict,out_file_path):
     plt.clf()
     plt.hold(True)
     all_min = min((min(data_dict[key]) for key in data_dict))
@@ -149,13 +172,13 @@ def histogram(data_dict,out_file_path):
     plt.legend(loc='upper right')
     plt.savefig(out_file_path, bbox_inches='tight')
 
-def bar_graph(dict,out_file_path):
+def _bar_graph(dict,out_file_path):
     plt.clf()
     plt.bar(range(len(dict)), dict.values(), align='center')
     plt.xticks(range(len(dict)), dict.keys())
     plt.savefig(out_file_path, bbox_inches='tight')
 
-def multi_bar_graph(dict_dict,out_file_path):
+def _multi_bar_graph(dict_dict,out_file_path):
     plt.clf()
     plt.hold(True)
     keys = dict_dict.keys()
@@ -173,13 +196,19 @@ def multi_bar_graph(dict_dict,out_file_path):
 
 
 
-def file_run(cns_file,*args): 
-
-    do_list = list(args)
-    print do_list
+def file_run(cns_file,*tasks): 
+    """This function is for running the workflow on a file and not a :class:`.Cns` object. 
+    It creates a :class:`.Cns` object from the file `cns_file` and compiles the `tasks` arguements into a list of strings then calls :func:`.main` using them.
+    
+    :param str cns_file: A path to the .cns file to analyze.
+    :param *args tasks: Any number of arguements, each of which is the name of a task to perform on `cns_file`.
+    :returns:  `None`
+    """
+    task_list = list(tasks)
+    print task_list
     cns = Cns()
     with open(cns_file) as file:
         cns.add_lines(file.readlines())
 
-    main(do_list,cns)
+    main(cns,task_list)
 

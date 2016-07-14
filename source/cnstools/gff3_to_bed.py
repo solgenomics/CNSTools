@@ -1,4 +1,4 @@
-from filetypes import Gff3, Bed6 
+from _filetypes import Gff3, Bed6 
 
 def main(gff3_file,sequence_types,out_file):
     with open(gff3_file) as file, open(out_file,"w") as out:

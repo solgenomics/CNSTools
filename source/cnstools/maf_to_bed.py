@@ -1,6 +1,6 @@
 
-import progress_tracker as pt
-from filetypes import Maf, Bed6
+import _progress_tracker as pt
+from _filetypes import Maf, Bed6
 
 def main(mafFile,outFile):
     with open(mafFile) as file, open(outFile,"w") as out:

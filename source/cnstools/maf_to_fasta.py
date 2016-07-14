@@ -1,5 +1,5 @@
 
-import progress_tracker as pt
+import _progress_tracker as pt
 
 def main(mafFile,outFolder):
 

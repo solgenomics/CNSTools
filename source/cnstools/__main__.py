@@ -1,6 +1,6 @@
 """The main script for the cnstools program, its only job is to import the cnstools python package and then run the specified task module with the remaining arguements"""
 import sys
-import cnstools
+import __init__ as cnstools
 program_run_dict = {}
 
 #import and create dictionary of the functions to run each __all__ named task module with file arguements

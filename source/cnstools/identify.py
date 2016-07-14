@@ -134,7 +134,7 @@ def main(data,out_folder,num_threads):
             tracker.status(seq['maf_name'])
             if seq['gff3_file_name']!="":
                 seq['cns_assoc'] = data['cns_assoc_folder']+seq['maf_name'].split("/")[-1].split(".gff")[0]+"_cns_assoc.bed"
-                cmd = "bedtools closest -D b -a %s -b %s > %s" % (seq['cns_locs'],seq['gene_bed'],seq['cns_assoc'])
+                cmd = "bedtools closest -D a -a %s -b %s > %s" % (seq['cns_locs'],seq['gene_bed'],seq['cns_assoc'])
                 process = subprocess.Popen(cmd, shell=True)
                 process.wait()
             tracker.step().display()

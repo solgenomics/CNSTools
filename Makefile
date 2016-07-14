@@ -8,7 +8,7 @@ DOC_PATH_CHANGE_COMMAND = import os; import sys; sys.path.insert(0, os.path.absp
 all: cnstools docs
 
 cnstools: macwash_source ./source $(SOURCE_DIRECTORIES) $(SOURCE_FILES)
-	rm ./build/cnstools
+	rm -r ./build/cnstools
 	cp -r ./source/cnstools ./build/cnstools
 	find ./build/ -name "*.pyc" -delete
 	cd ./build/cnstools/; zip -r ../cnstools.zip *; cd ../..

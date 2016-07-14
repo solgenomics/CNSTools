@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # CNStools documentation build configuration file, created by
-# sphinx-quickstart on Wed Jul 13 12:44:27 2016.
+# sphinx-quickstart on Wed Jul 13 23:58:11 2016.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -15,7 +15,6 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 import os; import sys; sys.path.insert(0, os.path.abspath("../source"));
-#
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
@@ -288,6 +287,12 @@ latex_documents = [
 # Documents to append as an appendix to all manuals.
 #
 # latex_appendices = []
+
+# It false, will not define \strong, \code, 	itleref, \crossref ... but only
+# \sphinxstrong, ..., \sphinxtitleref, ... To help avoid clash with user added
+# packages.
+#
+# latex_keep_old_macro_names = True
 
 # If false, no module index is generated.
 #

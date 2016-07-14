@@ -8,7 +8,8 @@ DOC_PATH_CHANGE_COMMAND = import os; import sys; sys.path.insert(0, os.path.absp
 all: cnstools docs
 
 cnstools: macwash_source ./source $(SOURCE_DIRECTORIES) $(SOURCE_FILES)
-	rm ./build/cnstools
+	mkdir -p ./build/
+	find ./build/ -name "cnstools" -delete
 	cp -r ./source/cnstools ./build/cnstools
 	find ./build/ -name "*.pyc" -delete
 	cd ./build/cnstools/; zip -r ../cnstools.zip *; cd ../..
@@ -23,6 +24,6 @@ macwash_source: ./source $(SOURCE_DIRECTORIES) $(SOURCE_FILES)
 
 docs: macwash_source $(DOC_DIRECTORIES) $(DOC_FILES) $(SOURCE_DIRECTORIES) $(SOURCE_FILES)
 	mkdir -p ./docs
-	sphinx-apidoc -F -e -o ./docs ./source -H CNStools
+	sphinx-apidoc -T -M -F -e -o ./docs ./source -H CNStools
 	sed -i "/use\ os.path.abspath/c\$(DOC_PATH_CHANGE_COMMAND)" ./docs/conf.py
 	cd docs; make html; cd ..

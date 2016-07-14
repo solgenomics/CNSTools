@@ -1,4 +1,4 @@
-from filetypes import Cns, Fasta 
+from _filetypes import Cns, Fasta 
 import os
 
 def main(cns_file,sequence_types,out_folder):

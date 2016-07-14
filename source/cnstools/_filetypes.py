@@ -1,6 +1,6 @@
 """Module which contains classes for storing the data for each filetype used in cnstools. The filetype classes also have some conversion functions for changing file formats."""
 from abc import ABCMeta, abstractmethod
-from progress_tracker import Progress_tracker
+from _progress_tracker import Progress_tracker
 
 class Filetype(object):
     """Abstract parent class of all of the filetype functions. The __init__ function here should be called by each subclass."""

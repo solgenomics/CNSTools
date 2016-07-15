@@ -8,7 +8,7 @@ def main(mafFile,outFolder):
         header = []
         body = [[]]
         lines = f.readlines()
-        track = Progress_tracker("Loading .maf",len(lines),True).display(estimate=False, rate=1)
+        track = Progress_tracker("Loading .maf",len(lines)).estimate(False).auto_display().start()
         for line in lines:
             stripped = line.strip()
             if stripped.startswith("#"):
@@ -22,7 +22,7 @@ def main(mafFile,outFolder):
         del track
 
         index = 0
-        track = Progress_tracker("Converting to .fasta",len(body),True).display(estimate=False, rate=1)
+        track = Progress_tracker("Converting to .fasta",len(body)).estimate(False).auto_display().start()
         for chunk in body:
             chunkInfo = []
             if len(chunk)>1:
@@ -42,7 +42,7 @@ def main(mafFile,outFolder):
 
     for i in fastaChunkBySpecies: 
         sp = fastaChunkBySpecies[i]
-        track = Progress_tracker("Saving %s.fasta"%(i),len(fastaChunkBySpecies[i]),True).display(estimate=False, rate=1)
+        track = Progress_tracker("Saving %s.fasta"%(i),len(fastaChunkBySpecies[i])).estimate(False).auto_display().start()
         with open(outFolder+i+".fasta","w") as out:
             for chunk in sp:
                 out.write(chunk[0][0]+"|".join(chunk[0][1:])+"\n")

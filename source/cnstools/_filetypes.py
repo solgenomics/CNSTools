@@ -397,7 +397,7 @@ class Fasta(Serial_Filetype):
         for paragraph in paragraphs:
             for item in paragraph[1:]:
                 if not type(item) is str:
-                    print item
+                    raise TypeError (str(item))
             self.entries.append(Fasta_entry(paragraph[0],"".join(paragraph[1:])))
             tracker.step(len(paragraph))
         tracker.done()

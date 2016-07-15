@@ -17,8 +17,7 @@ def main(bed_file,maf_file,out_file,min_size=15,max_gap_ratio=0.5,max_N_ratio=0.
     bed_entries = []
     with open(bed_file) as f:
         filelines = f.readlines()
-        tracker = Progress_tracker("Parsing .bed",len(filelines))
-        tracker.display(estimate=False,rate=2)
+        tracker = Progress_tracker("Parsing .bed",len(filelines)).estimate(False).auto_display()
         for line in filelines:
             list = line.strip().split("\t")
             list[3] = list[3].split("ID=")[1]
@@ -32,8 +31,7 @@ def main(bed_file,maf_file,out_file,min_size=15,max_gap_ratio=0.5,max_N_ratio=0.
             if(dict['stop']-dict['start']>=min_size):
                 bed_entries.append(dict)
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
 
 
     maf_entries = []
@@ -41,8 +39,7 @@ def main(bed_file,maf_file,out_file,min_size=15,max_gap_ratio=0.5,max_N_ratio=0.
     with open(maf_file) as f:
         body = [[]]
         filelines = f.readlines()
-        tracker = Progress_tracker("Parsing .maf",len(filelines))
-        tracker.display(estimate=False,rate=2)
+        tracker = Progress_tracker("Parsing .maf",len(filelines)).estimate(False).auto_display()
         if filelines[-1].strip()!="":
             filelines.append("")
         for line in filelines:
@@ -65,11 +62,9 @@ def main(bed_file,maf_file,out_file,min_size=15,max_gap_ratio=0.5,max_N_ratio=0.
             else:
                 body[-1].append(stripped)
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
             
-    tracker = Progress_tracker("Trimming .maf",len(bed_entries))
-    tracker.display(estimate=False,rate=1)
+    tracker = Progress_tracker("Trimming .maf",len(bed_entries)).estimate(False).auto_display()
     index = 0
     new_maf_entries = []
     for bed in bed_entries:
@@ -93,12 +88,10 @@ def main(bed_file,maf_file,out_file,min_size=15,max_gap_ratio=0.5,max_N_ratio=0.
         if len(new_ma['s_lines'])>1 and max((line[3] for line in new_ma['s_lines'])) >= min_size:
             new_maf_entries.append(new_ma)
         tracker.step()
-    tracker.display()
-    del tracker
+    tracker.done()
 
     with open(out_file,"w") as out:
-        tracker = Progress_tracker("Saving new .maf",len(new_maf_entries))
-        tracker.display(estimate=False,rate=1)
+        tracker = Progress_tracker("Saving new .maf",len(new_maf_entries)).estimate(False).auto_display()
         out_lines = []
         for entry in new_maf_entries:
             out.write(" ".join(entry['a_line'])+"\n") 
@@ -106,8 +99,7 @@ def main(bed_file,maf_file,out_file,min_size=15,max_gap_ratio=0.5,max_N_ratio=0.
                 out.write(" ".join([str(item) for item in s_line])+"\n")
             out.write("\n")
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
 
 def _s_line_valid(x,max_gap_ratio,max_N_ratio):
     if x[3]/float(len(x[6])) > 1-max_gap_ratio and _no_gap_len(x[6][:].replace('N',''))/float(x[3]) > 1-max_N_ratio:

@@ -35,13 +35,10 @@ def main(data,out_folder,num_threads):
     if not 'cns_bed' in data: 
         data['cns_bed'] = out_folder+data['seq_bed'].split("/")[-1].split(".bed")[0]+"_CNS.bed"
         cmd = "bedtools subtract -a %s -b %s > %s" % (data['seq_bed'],data['cds_bed'],data['cns_bed'])
-        tracker = Progress_tracker("Running bedtools",1)
-        tracker.display(estimate=False)
+        tracker = Progress_tracker("Running bedtools",1).estimate(False).display()
         process = subprocess.Popen(cmd, shell=True)
         process.wait()
-        tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
 
     # bed_maf_parse(cns_bed,roasted_maf_file) -> cns_maf w/cns_seq_ids
     header_print("Making a new .maf of only CNSs")
@@ -66,7 +63,7 @@ def main(data,out_folder,num_threads):
         cmd = "mkdir %s" % (data['blast_db_folder'])
         process = subprocess.Popen(cmd, shell=True)
         process.wait()
-        tracker = Progress_tracker("Building BLAST databases",len(data['seqs'])).display(estimate=False)
+        tracker = Progress_tracker("Building BLAST databases",len(data['seqs'])).estimate(False).display()
         for seq in data['seqs']:
             genome_file = seq['genome_fasta_name']
             seq['db_name'] = data['blast_db_folder']+seq['maf_name']+"_db"
@@ -76,8 +73,8 @@ def main(data,out_folder,num_threads):
             process.wait()
             if process.stderr!=None: 
                 for line in process.stderr.readlines(): print line+"\n\n"
-            tracker.step().display(estimate=False)
-        del tracker
+            tracker.step().display()
+        tracker.status(None).done()
 
     #$blast(cns_fastas@blast_dbs) -> cns_blasts w/cns_seq_ids
     header_print("BLASTing CNSs for each genome.")
@@ -85,7 +82,7 @@ def main(data,out_folder,num_threads):
         data['blast_results_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_blast_results/"
         process = subprocess.Popen("mkdir "+data['blast_results_folder'], shell=True)
         process.wait()
-        tracker = Progress_tracker("Running BLAST",len(data['seqs'])).display(estimate=False)
+        tracker = Progress_tracker("Running BLAST",len(data['seqs'])).estimate(False).display()
         for seq in data['seqs']:
             tracker.status('running BLAST for %s' % (seq['maf_name']))
             depth = len(data['blast_db_folder'].split("/"))-1
@@ -97,8 +94,8 @@ def main(data,out_folder,num_threads):
             process.wait()
             if process.stderr!=None: 
                 for line in process.stderr.readlines(): print line
-            tracker.step().display(estimate=False)
-        del tracker
+            tracker.step().display()
+        tracker.status(None).done()
 
     #blast_to_bed(cns_blasts) -> cns_locs w/cns_seq_ids
     header_print("Filtering and converting Blast results to .bed files for each genome.")
@@ -129,7 +126,7 @@ def main(data,out_folder,num_threads):
         data['cns_assoc_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_cns_assoc/"
         process = subprocess.Popen("mkdir "+data['cns_assoc_folder'], shell=True)
         process.wait()
-        tracker = Progress_tracker("Finding associations",len(data['seqs'])).display(estimate=False)
+        tracker = Progress_tracker("Finding associations",len(data['seqs'])).estimate(False).display()
         for seq in data['seqs']:
             tracker.status(seq['maf_name'])
             if seq['gff3_file_name']!="":
@@ -138,7 +135,7 @@ def main(data,out_folder,num_threads):
                 process = subprocess.Popen(cmd, shell=True)
                 process.wait()
             tracker.step().display()
-        del tracker
+        tracker.status(None).done()
 
     #!parse_cns_data(data,out) -> cns_assoc_info w/cns_seq_ids
     header_print("Parsing association data.")

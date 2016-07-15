@@ -26,6 +26,7 @@ class Progress_tracker():
         self.progress = 0
         self.start_time = None
         self.started = False
+        self.is_done = False
 
     def start(self):
         if not self.started:
@@ -37,6 +38,8 @@ class Progress_tracker():
         self.steps = self.size
         self.ab = False
         self.display()
+        self.is_done = True
+        return self
 
     def step(self,size=1):
         if not self.started:
@@ -59,17 +62,19 @@ class Progress_tracker():
         return self
 
     def _auto_display(self):
-        if self.ad and self.steps<=self.size:
+        if not self.is_done:
             if self.started:
-                self.display()
-            self.ad_next = self.ad_next+self.ad_rate
-            new_thread = threading.Timer(self.ad_next-time.time(),self._auto_display)
-            new_thread.daemon = True
-            new_thread.start()
+                    self.display()
+            if self.ad and self.steps<=self.size:
+                self.ad_next = self.ad_next+self.ad_rate
+                new_thread = threading.Timer(self.ad_next-time.time(),self._auto_display)
+                new_thread.daemon = True
+                new_thread.start()
 
     def display(self):
 
         curr_time = time.time()
+        if not self.started: self.start_time = curr_time
         time_elapsed = curr_time-self.start_time
 
         self.progress = float(self.steps)/float(self.size)
@@ -115,11 +120,4 @@ class Progress_tracker():
         self.status_message = status_message
         self.display(estimate=self.estimate_on)
         return self
-
-header_print("Testing")
-
-ppscle = Progress_tracker("Popsicle",10000000).auto_display(1)
-for i in range(10000000):
-    ppscle.step()
-ppscle.done()
 

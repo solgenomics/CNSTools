@@ -20,8 +20,9 @@
 
     #!parse_cns_data(data,out) -> cns_assoc_info w/cns_seq_ids
 from _filetypes import Maf,Gff3,Fasta
-def main(maf_data,seq_data,num_threads):
-    pass
+from copy import deepcopy
+def main(input_data,num_threads):
+    data = 
 
 def file_run(json_file,out_folder,num_threads):
 
@@ -31,16 +32,6 @@ def file_run(json_file,out_folder,num_threads):
     if not out_folder.endswith("/"):
         out_folder+="/"
     num_threads = int(num_threads)
-
-    maf_data = Maf(file_name=config["maf_file"])
-    seq_data = []
-    for seq_config in config["seqs"]:
-        seq_data.append({
-            "maf_name":seq_data["maf_name"],
-            "annotation":Gff3(file_name=seq_data["gff3_file_name"]),
-            "genome_seq":Fasta(file_name=seq_data["genome_fasta_name"])
-            })
-
-    main(maf_data,seq_data,num_threads)
+    main(input_data,num_threads)
 
 

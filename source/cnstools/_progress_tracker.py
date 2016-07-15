@@ -1,5 +1,3 @@
-#David Lyon    
-                                                                                                                                                                                 
 import time
 import sys
 

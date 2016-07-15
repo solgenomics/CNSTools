@@ -11,6 +11,7 @@ names = [
     "gff2_to_bed",
     "gff3_to_bed",
     "identify",
+    "identify_new",
     "maf_to_bed",
     "maf_to_fasta",
     "parse_cns_data",

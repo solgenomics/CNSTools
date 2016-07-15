@@ -20,6 +20,11 @@
 
     #!parse_cns_data(data,out) -> cns_assoc_info w/cns_seq_ids
 from _filetypes import Maf,Gff3,Fasta
+import json
+import cPickle
+import sys
+
+
 def main(maf_data,seq_data,num_threads):
     pass
 
@@ -36,10 +41,12 @@ def file_run(json_file,out_folder,num_threads):
     seq_data = []
     for seq_config in config["seqs"]:
         seq_data.append({
-            "maf_name":seq_data["maf_name"],
-            "annotation":Gff3(file_name=seq_data["gff3_file_name"]),
-            "genome_seq":Fasta(file_name=seq_data["genome_fasta_name"])
+            "maf_name":seq_config["maf_name"],
+            "annotation":Gff3(file_name=seq_config["gff3_file_name"]) if seq_config["gff3_file_name"]!='' else None,
+            "genome_seq":Fasta(file_name=seq_config["genome_fasta_name"]) if seq_config["genome_fasta_name"]!='' else None
             })
+        
+    print "size: %s" % (sys.getsizeof(cPickle.dumps((maf_data,seq_data))))
 
     main(maf_data,seq_data,num_threads)
 

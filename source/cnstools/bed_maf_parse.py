@@ -1,8 +1,7 @@
 """A script for creating an intersection between a .maf multiple alignment file and a .bed file containing ranges within those alignments.
 """
 
-import _progress_tracker as pt
-
+from _utils import Progress_tracker
 def main(bed_file,maf_file,out_file,min_size=15,max_gap_ratio=0.5,max_N_ratio=0.5):
     """This function runs the main workflow for the script.
 
@@ -18,7 +17,7 @@ def main(bed_file,maf_file,out_file,min_size=15,max_gap_ratio=0.5,max_N_ratio=0.
     bed_entries = []
     with open(bed_file) as f:
         filelines = f.readlines()
-        tracker = pt.Progress_tracker("Parsing .bed",len(filelines))
+        tracker = Progress_tracker("Parsing .bed",len(filelines))
         tracker.display(estimate=False,rate=2)
         for line in filelines:
             list = line.strip().split("\t")
@@ -42,7 +41,7 @@ def main(bed_file,maf_file,out_file,min_size=15,max_gap_ratio=0.5,max_N_ratio=0.
     with open(maf_file) as f:
         body = [[]]
         filelines = f.readlines()
-        tracker = pt.Progress_tracker("Parsing .maf",len(filelines))
+        tracker = Progress_tracker("Parsing .maf",len(filelines))
         tracker.display(estimate=False,rate=2)
         if filelines[-1].strip()!="":
             filelines.append("")
@@ -69,7 +68,7 @@ def main(bed_file,maf_file,out_file,min_size=15,max_gap_ratio=0.5,max_N_ratio=0.
         tracker.display()
         del tracker
             
-    tracker = pt.Progress_tracker("Trimming .maf",len(bed_entries))
+    tracker = Progress_tracker("Trimming .maf",len(bed_entries))
     tracker.display(estimate=False,rate=1)
     index = 0
     new_maf_entries = []
@@ -98,7 +97,7 @@ def main(bed_file,maf_file,out_file,min_size=15,max_gap_ratio=0.5,max_N_ratio=0.
     del tracker
 
     with open(out_file,"w") as out:
-        tracker = pt.Progress_tracker("Saving new .maf",len(new_maf_entries))
+        tracker = Progress_tracker("Saving new .maf",len(new_maf_entries))
         tracker.display(estimate=False,rate=1)
         out_lines = []
         for entry in new_maf_entries:

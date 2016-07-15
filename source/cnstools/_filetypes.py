@@ -1,6 +1,6 @@
 """Module which contains classes for storing the data for each filetype used in cnstools. The filetype classes also have some conversion functions for changing file formats."""
 from abc import ABCMeta, abstractmethod
-from _progress_tracker import Progress_tracker
+from _utils import Progress_tracker
 
 class Serial_Filetype(object):
     """Abstract parent class of all of the filetype functions. The __init__ function here should be called by each subclass."""
@@ -83,7 +83,7 @@ class Cns(Serial_Filetype):
     Entry_class = Cns_entry
     def add_lines(self,lines):
         ID=None
-        tracker = Progress_tracker("Parsing .cns",len(lines)).display(estimate=False,rate=0.5)
+        tracker = Progress_tracker("Parsing .cns",len(lines)).auto_display().start()
         for line in lines:
             list = [item if item!='.' else None for item in line.split('\t')]
             if list[0]!=ID:
@@ -91,23 +91,20 @@ class Cns(Serial_Filetype):
                 self.entries.append(Cns_entry(ID))
             self.entries[-1].add_seq(*(list[1:]))
             tracker.step()
-        tracker.display()
-        del tracker
-
+        tracker.done()
     def get_lines(self):
         return [line for entry in self.entries for line in entry.get_lines()]
     def to_fasta(self,sequences=False):
         """converts the .cns data to multiple .fasta data classes and returns a dict with sequence origin names as keys"""
         fastas = {}
-        tracker = Progress_tracker("Converting to .fasta files",len(self.entries)).display(estimate=False,rate=0.5)
+        tracker = Progress_tracker("Converting to .fasta files",len(self.entries)).auto_display().start()
         for entry in self.entries:
             for seq in [seq for key in entry.sequences for seq in entry.sequences[key]]:
                 if seq.genome not in fastas: fastas[seq.genome] = Fasta()
                 description = "|".join((str(a) for a in (seq.cns_ID,seq.type,seq.loc_chrom,seq.start,seq.stop)))
                 fastas[seq.genome].add_entry(description,seq.sequence.replace("-", ""))
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
         return fastas
 
 
@@ -133,7 +130,7 @@ class Bed6(Serial_Filetype):
     """0-based"""
     Entry_class = Bed6_entry
     def add_lines(self,lines):
-        tracker = Progress_tracker("Parsing 6 column .bed",len(lines)).display(estimate=False,rate=0.5)
+        tracker = Progress_tracker("Parsing 6 column .bed",len(lines)).auto_display().start()
         for line in lines:
             fields = line.strip().split('\t')
             if len(fields)>1:
@@ -142,8 +139,7 @@ class Bed6(Serial_Filetype):
                 fields[:] = [item if item!='.' else None for item in fields]
                 self.entries.append(Bed6_entry(*fields))
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
     def get_lines(self):
         lines = []
         for entry in self.entries:
@@ -200,14 +196,13 @@ class BlastF6(Serial_Filetype):
     """1-based"""
     Entry_class = BlastF6_entry
     def add_lines(self,lines):
-        tracker = Progress_tracker("Parsing blast output",len(lines)).display(estimate=False,rate=0.5)
+        tracker = Progress_tracker("Parsing blast output",len(lines)).auto_display().start()
         for line in lines:
             fields = line.strip().split('\t')
             if (len(fields)==12):
                 self.entries.append(BlastF6_entry(*fields))
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
     def get_lines(self):
         lines = []
         for entry in self.entries:
@@ -215,7 +210,7 @@ class BlastF6(Serial_Filetype):
         return lines
     def to_bed(self):
         new_bed = Bed6()
-        tracker = Progress_tracker("Converting to .bed",len(self.entries)).display(estimate=False,rate=0.5)
+        tracker = Progress_tracker("Converting to .bed",len(self.entries)).auto_display().start()
         for entry in self.entries:
             strand = None
             if entry.targetStart < entry.targetEnd:
@@ -227,8 +222,7 @@ class BlastF6(Serial_Filetype):
             #convert to 0-based!
             new_bed.add_entry(entry.target, start-1, end, entry.query, entry.bitScore, strand)
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
         return new_bed
 
 class Gff3_entry(object):
@@ -254,15 +248,14 @@ class Gff3(Serial_Filetype):
     """1-based"""
     Entry_class = Gff3_entry
     def add_lines(self,lines):
-        tracker = Progress_tracker("Parsing .gff3",len(lines)).display(estimate=False,rate=0.5)
+        tracker = Progress_tracker("Parsing .gff3",len(lines)).auto_display().start()
         for line in lines:
             if not line.startswith('#'):
                 fields = line.strip().split('\t')
                 if (len(fields)==9):
                     self.entries.append(Gff3_entry(*fields))
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
     def get_lines(self):
         lines = []
         for entry in self.entries:
@@ -275,7 +268,7 @@ class Gff3(Serial_Filetype):
             entry_selection = [entry for entry in self.entries if entry.type in type_list]
         else:
             entry_selection = self.entries
-        tracker = Progress_tracker("Converting to .bed",len(entry_selection)).display(estimate=False,rate=0.5)
+        tracker = Progress_tracker("Converting to .bed",len(entry_selection)).auto_display().start()
         for entry in entry_selection:
             if(entry.start<entry.end):
                 chromStart,chromEnd = entry.start,entry.end
@@ -284,13 +277,12 @@ class Gff3(Serial_Filetype):
             id_with_type = entry.attributes+";seqType="+entry.type
             new_bed.add_entry(entry.seqid, chromStart-1, chromEnd, name=id_with_type, score=entry.score, strand=entry.strand)
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
         return new_bed
 
 class Gff2(Gff3):
     def add_lines(self,lines):
-        tracker = Progress_tracker("Parsing .gff3",len(lines)).display(estimate=False,rate=0.5)
+        tracker = Progress_tracker("Parsing .gff3",len(lines)).auto_display().start()
         for line in lines:
             if not line.startswith('#'):
                 fields = [i for i in line.strip().split('\t') if i!='']
@@ -298,8 +290,7 @@ class Gff2(Gff3):
                     fields = fields[:2]+["?"]+fields[2:] #unknown type!
                     self.entries.append(Gff3_entry(*fields))
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
 
 class Maf_sequence(object):
     def __init__(self,src,start,size,strand,srcSize,text,metadata=None):
@@ -350,7 +341,7 @@ class Maf(Serial_Filetype):
     def add_lines(self,lines):
         if not hasattr(self, 'headerLines'): self.headerLines = []
         paragraph = []
-        tracker = Progress_tracker("Parsing .maf",len(lines)).display(estimate=False,rate=0.5)
+        tracker = Progress_tracker("Parsing .maf",len(lines)).auto_display().start()
         for line in lines:
             stripped = line.strip()
             if stripped.startswith("#") and not stripped.startswith("##--"):
@@ -362,8 +353,7 @@ class Maf(Serial_Filetype):
             else:
                 paragraph.append(stripped)
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
     def get_lines(self):
         lines = []
         for entry in self.entries:
@@ -372,15 +362,14 @@ class Maf(Serial_Filetype):
         return lines
     def to_bed(self,seq_name=None):
         new_bed = Bed6()
-        tracker = Progress_tracker("Converting to .bed",len(self.entries)).display(estimate=False,rate=0.5)
+        tracker = Progress_tracker("Converting to .bed",len(self.entries)).auto_display().start()
         if not seq_name: 
             seq_name=self.entries[0].sequences[0].src
         for entry in self.entries:
             for sequence in (seq for seq in entry.sequences if seq.src==seq_name):
                 new_bed.add_entry(sequence.src, sequence.start, sequence.start+sequence.size, name=sequence.metadata, strand=sequence.strand)
             tracker.step()
-        tracker.display()
-        del tracker
+        tracker.done()
         return new_bed
 
 class Fasta_entry(object):
@@ -396,7 +385,7 @@ class Fasta(Serial_Filetype):
     def add_lines(self,lines):
         paragraphs = [[]]
         first_found = False
-        tracker = Progress_tracker("Parsing .fasta data",len(lines*2)).display(estimate=False,rate=0.5)
+        tracker = Progress_tracker("Parsing .fasta data",len(lines*2)).auto_display().start()
         for line in lines:
             stripped = line.strip()
             if stripped.startswith('>'):
@@ -411,8 +400,7 @@ class Fasta(Serial_Filetype):
                     print item
             self.entries.append(Fasta_entry(paragraph[0],"".join(paragraph[1:])))
             tracker.step(len(paragraph))
-        tracker.display()
-        del tracker
+        tracker.done()
     def get_lines(self):
         lines = []
         for entry in self.entries:

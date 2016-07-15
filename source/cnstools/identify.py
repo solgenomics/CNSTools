@@ -1,4 +1,4 @@
-import _progress_tracker as pt
+from _utils import Progress_tracker,header_print
 import subprocess
 import json
 import os
@@ -35,7 +35,7 @@ def main(data,out_folder,num_threads):
     if not 'cns_bed' in data: 
         data['cns_bed'] = out_folder+data['seq_bed'].split("/")[-1].split(".bed")[0]+"_CNS.bed"
         cmd = "bedtools subtract -a %s -b %s > %s" % (data['seq_bed'],data['cds_bed'],data['cns_bed'])
-        tracker = pt.Progress_tracker("Running bedtools",1)
+        tracker = Progress_tracker("Running bedtools",1)
         tracker.display(estimate=False)
         process = subprocess.Popen(cmd, shell=True)
         process.wait()
@@ -66,7 +66,7 @@ def main(data,out_folder,num_threads):
         cmd = "mkdir %s" % (data['blast_db_folder'])
         process = subprocess.Popen(cmd, shell=True)
         process.wait()
-        tracker = pt.Progress_tracker("Building BLAST databases",len(data['seqs'])).display(estimate=False)
+        tracker = Progress_tracker("Building BLAST databases",len(data['seqs'])).display(estimate=False)
         for seq in data['seqs']:
             genome_file = seq['genome_fasta_name']
             seq['db_name'] = data['blast_db_folder']+seq['maf_name']+"_db"
@@ -85,7 +85,7 @@ def main(data,out_folder,num_threads):
         data['blast_results_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_blast_results/"
         process = subprocess.Popen("mkdir "+data['blast_results_folder'], shell=True)
         process.wait()
-        tracker = pt.Progress_tracker("Running BLAST",len(data['seqs'])).display(estimate=False)
+        tracker = Progress_tracker("Running BLAST",len(data['seqs'])).display(estimate=False)
         for seq in data['seqs']:
             tracker.status('running BLAST for %s' % (seq['maf_name']))
             depth = len(data['blast_db_folder'].split("/"))-1
@@ -129,7 +129,7 @@ def main(data,out_folder,num_threads):
         data['cns_assoc_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_cns_assoc/"
         process = subprocess.Popen("mkdir "+data['cns_assoc_folder'], shell=True)
         process.wait()
-        tracker = pt.Progress_tracker("Finding associations",len(data['seqs'])).display(estimate=False)
+        tracker = Progress_tracker("Finding associations",len(data['seqs'])).display(estimate=False)
         for seq in data['seqs']:
             tracker.status(seq['maf_name'])
             if seq['gff3_file_name']!="":
@@ -158,11 +158,6 @@ def main(data,out_folder,num_threads):
     #    closest genes and distance for each species from cns_assoc_info
     #    catagory from cns_assoc_info
     header_print("Finished! Results in:%s"%data['final_results_folder'])
-
-def header_print(header):
-    wall = "-"*70#*(len(header)+2)
-    print "\n%s\n %s \n%s\n" % (wall,header,wall)
-    return
 
 def file_run(json_file,out_folder,num_threads_in):
     config = None

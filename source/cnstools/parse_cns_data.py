@@ -1,4 +1,4 @@
-import _progress_tracker as pt
+from _utils import Progress_tracker
 from _filetypes import Maf, Cns, Bed13
 
 def main(data,out_folder):
@@ -10,7 +10,7 @@ def main(data,out_folder):
 
 
     cns_entry_by_ID = {}
-    tracker = pt.Progress_tracker("Converting to .cns",len(maf.entries)).display(estimate=False,rate=1)
+    tracker = Progress_tracker("Converting to .cns",len(maf.entries)).display(estimate=False,rate=1)
     for entry in maf.entries:
         ID = entry.a_line.split("cns_ID=")[1].split()[0]
         if not ID in cns_entry_by_ID: cns_entry_by_ID[ID] = cns_out.add_entry(ID)
@@ -22,7 +22,7 @@ def main(data,out_folder):
 
 
     assoc_files = [(seq['maf_name'],open(seq['cns_assoc'])) for seq in data['seqs'] if 'cns_assoc' in seq]
-    tracker = pt.Progress_tracker("Parsing association files",len(assoc_files)).display(estimate=False,rate=1)
+    tracker = Progress_tracker("Parsing association files",len(assoc_files)).display(estimate=False,rate=1)
     for name,file in assoc_files:
         a_dat = Bed13(lines=file.readlines())
         for entry in a_dat.entries:

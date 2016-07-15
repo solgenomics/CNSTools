@@ -1,5 +1,4 @@
 
-import _progress_tracker as pt
 from _filetypes import Maf, Bed6
 
 def main(mafFile,outFile):

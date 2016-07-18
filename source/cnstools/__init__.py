@@ -6,12 +6,10 @@ python scripts. Currently this documentation only covers the imported module, mo
 names = [
     "analyze_cns",
     "bed_maf_parse",
-    "blast_to_bed",
     "cns_to_fasta",
     "gff2_to_bed",
     "gff3_to_bed",
     "identify",
-    "identify_new",
     "maf_to_bed",
     "maf_to_fasta",
     "parse_cns_data",

@@ -1,166 +1,122 @@
-from _utils import Progress_tracker,header_print
-import subprocess
 import json
 import os
+from copy import deepcopy
+from _filetypes import Maf, Gff3, Bed6
+from build_cns_file import main as build_cns_file
+from _utils import create_path, JSON_saver, safe_print, header_print, Progress_tracker
 
-from __init__ import names as listOfModules
-for name in listOfModules:
-    if name!="identify":
-        exec "from "+name+" import main as " + name
-        
+json_file_format = {
+    "all_seq_maf":"PATH",
+    "all_conserved_bed":"PATH",
+    "ref_genome":"PREFIX",
+    "genomes":{
+        "PREFIX":{
+            "annot_gff3":"PATH"
+        }
+    }
+}
 
-def main(data,out_folder,num_threads):
-    num_availible_threads = num_threads-1
+def main(json_data,work_folder,num_threads,overwrite=False):
+    datasaver = JSON_saver(create_path(work_folder,"record","json",overwrite))
+    data = deepcopy(json_data)
+    datasaver.save(data)
 
-    process = subprocess.Popen("mkdir -p "+out_folder, shell=True)
+    info = "Convert aligned sequences to .bed:"
+    header_print(info)
+    data['all_seq_bed'] = create_path(work_folder,"all_seq","bed",overwrite)
+    Maf(file_name=data['all_seq_maf']) \
+        .to_bed(seq_name=None,index_tag="all_maf_index") \
+        .save_file(data['all_seq_bed'])
+    datasaver.save(data)
+
+    info = "Intersect aligned regions with conserved regions:"
+    header_print(info)
+    data['conserved_bed'] = create_path(work_folder,"conserved","bed",overwrite)
+    cmd = "bedtools intersect -a %s -b %s > %s" % (data['all_seq_bed'],data['all_conserved_bed'],data['conserved_bed'])
+    tracker = Progress_tracker("Running bedtools intersect",1).estimate(False).display()
+    process = subprocess.Popen(cmd, shell=True)
     process.wait()
+    tracker.done()
+    datasaver.save(data)
 
-    #print(json.dumps(data, sort_keys=True, indent=4, separators=(',', ': ')))
+    info = "Convert coding regions to .bed:"
+    header_print(info)
+    data['coding_bed'] = create_path(work_folder,"coding","bed",overwrite)
+    Gff3(file_name=data['genomes'][data['ref_genome']]['annot_gff3']) \
+        .to_bed(['CDS']) \
+        .save_file(data['coding_bed'])
+    datasaver.save(data)
 
-    #maf_to_bed(roasted_maf_file) -> seq_bed w/maf_seq_ids
-    if not 'seq_bed' in data:
-        header_print("Converting .maf file main sequence to .bed file ranges.")
-        data['seq_bed'] = out_folder+data['maf_file'].split("/")[-1].split(".maf")[0]+".bed"
-        maf_to_bed(data['maf_file'],data['seq_bed'])
+    info = "Subtract coding regions from conserved aligned regions:"
+    header_print(info)
+    data['cns_bed'] = create_path(work_folder,"cns","bed",overwrite)
+    cmd = "bedtools subtract -a %s -b %s > %s" % (data['conserved_bed'],data['coding_bed'],data['cns_bed'])
+    tracker = Progress_tracker("Running bedtools subtract",1).estimate(False).display()
+    process = subprocess.Popen(cmd, shell=True)
+    process.wait()
+    tracker.done()
+    datasaver.save(data)
 
-    #gff3_to_bed(main_gff3,"CDS") -> cds_bed
-    header_print("Converting main .gff3 CDS ranges to .bed file ranges.")
-    if not 'main_gff3' in data:
-        data['main_gff3'] = data['seqs'][0]['gff3_file_name']
-        data['cds_bed'] = out_folder+data['main_gff3'].split("/")[-1].split(".gff3")[0]+"_CDS.bed"
-        gff3_to_bed(data['main_gff3'],['CDS'],data['cds_bed'])
+    info = "Slice multi-alignment file based on identified conserved non-coding regions:"
+    header_print(info)
+    data['cns_maf'] = create_path(work_folder,"cns","maf",overwrite)
+    cns_bed = Bed6(file_name=data['cns_bed'])
+    Maf(file_name=data['all_seq_maf']) \
+        .slice_with_bed(cns_bed,data['ref_genome'],"all_maf_index",max_N_ratio=0.5,max_gap_ratio=0.5,min_len=15) \
+        .save_file(data['cns_maf'])
+    del cns_bed
+    datasaver.save(data)
 
-    #$bedtools.subtract(seq_bed - cds_bed) -> cns_bed w/maf_seq_ids
-    header_print("Subtracting CDS seqs from alignment.")
-    if not 'cns_bed' in data: 
-        data['cns_bed'] = out_folder+data['seq_bed'].split("/")[-1].split(".bed")[0]+"_CNS.bed"
-        cmd = "bedtools subtract -a %s -b %s > %s" % (data['seq_bed'],data['cds_bed'],data['cns_bed'])
-        tracker = Progress_tracker("Running bedtools",1).estimate(False).display()
+    info = "Convert per-genome CNS regions to .bed:"
+    header_print(info)
+    data['genome_cns_beds_folder'] = create_path(work_folder+"genome_cns_beds",overwrite)
+    cns_maf = Maf(file_name=data['cns_maf'])
+    for genome in data['genomes']:
+        data['genomes'][genome]['cns_bed'] = create_path(data['genome_cns_beds_folder'],genome+"_cns","bed",overwrite)
+        cns_maf.to_bed(seq_name=genome,index_tag="cns_maf_index") \
+            .save_file(data['genomes'][genome]['cns_bed'])
+    del cns_maf
+    datasaver.save(data)
+
+    info = "Convert per-genome gene regions to .bed:"
+    header_print(info)
+    data['genome_annot_beds_folder'] = create_path(work_folder+"genome_annot_beds",overwrite)
+    for genome in data['genomes']:
+        data['genomes'][genome]['annot_bed'] = create_path(data['genome_annot_beds_folder'],genome+"_annot","bed",overwrite)
+        Gff3(file_name=data['genomes'][genome]['annot_gff3']) \
+            .to_bed(type_list=['gene'],genome=genome) \
+            .save_file(data['genomes'][genome]['annot_bed'])
+    datasaver.save(data)
+
+    info = "Find closest gene for each CNS region:"
+    header_print(info)
+    data['gene_proximity_beds_folder'] = create_path(work_folder+"gene_proximity_beds",overwrite)
+    for genome in data['genomes']:
+        data['genomes'][genome]['gene_proximity_bed'] = \
+            create_path(data['gene_proximity_beds_folder'],genome+"_proxim","bed",overwrite)
+        cmd = "bedtools closest -D a -a %s -b %s > %s" % \
+            (data['genomes'][genome]['cns_bed'],
+             data['genomes'][genome]['annot_bed'],
+             data['genomes'][genome]['gene_proximity_bed'])
         process = subprocess.Popen(cmd, shell=True)
         process.wait()
-        tracker.done()
+    datasaver.save(data)
 
-    # bed_maf_parse(cns_bed,roasted_maf_file) -> cns_maf w/cns_seq_ids
-    header_print("Making a new .maf of only CNSs")
-    if not 'cns_maf' in data:
-        data['cns_maf'] = out_folder+data['cns_bed'].split("/")[-1].split(".bed")[0]+".maf"
-        bed_maf_parse(data['cns_bed'],data['maf_file'],data['cns_maf'])
-
-    # maf_to_fasta(cns_maf) -> cns_fastas w/cns_seq_ids
-    header_print("Making fasta files from .maf")
-    if not 'cns_fasta_folder' in data:
-        data['cns_fasta_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_fastas/"
-        process = subprocess.Popen("mkdir "+data['cns_fasta_folder'], shell=True)
-        process.wait()
-        for seq in data['seqs']:
-            seq['cns_fasta'] = data['cns_fasta_folder']+seq['maf_name']+".fasta"
-        maf_to_fasta(data['cns_maf'],data['cns_fasta_folder'])
-
-    #$makeblastdb(gff3_files) -> blasts_dbs
-    header_print("Building BLAST databases for each genome.")
-    if not 'blast_db_folder' in data:
-        data['blast_db_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_blast_dbs/"
-        cmd = "mkdir %s" % (data['blast_db_folder'])
-        process = subprocess.Popen(cmd, shell=True)
-        process.wait()
-        tracker = Progress_tracker("Building BLAST databases",len(data['seqs'])).estimate(False).display()
-        for seq in data['seqs']:
-            genome_file = seq['genome_fasta_name']
-            seq['db_name'] = data['blast_db_folder']+seq['maf_name']+"_db"
-            cmd = "makeblastdb -in %s -out %s -dbtype nucl -hash_index" % (genome_file,seq['db_name'])
-            tracker.status('building %s database' % (seq['maf_name']))
-            process = subprocess.Popen(cmd, shell=True,stdout=subprocess.PIPE)
-            process.wait()
-            if process.stderr!=None: 
-                for line in process.stderr.readlines(): print line+"\n\n"
-            tracker.step().display()
-        tracker.status(None).done()
-
-    #$blast(cns_fastas@blast_dbs) -> cns_blasts w/cns_seq_ids
-    header_print("BLASTing CNSs for each genome.")
-    if not 'blast_results_folder' in data:
-        data['blast_results_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_blast_results/"
-        process = subprocess.Popen("mkdir "+data['blast_results_folder'], shell=True)
-        process.wait()
-        tracker = Progress_tracker("Running BLAST",len(data['seqs'])).estimate(False).display()
-        for seq in data['seqs']:
-            tracker.status('running BLAST for %s' % (seq['maf_name']))
-            depth = len(data['blast_db_folder'].split("/"))-1
-            up = "../"*depth
-            seq['cns_blast'] = data['blast_results_folder']+seq['maf_name']+".txt"
-            cmd = "cd %s; blastn -db %s -query %s -out %s -outfmt 6 -word_size 14 -dust no -ungapped -perc_identity 100 -qcov_hsp_perc 100 -num_threads %s -culling_limit 1 -penalty -100; cd %s" \
-            % (data['blast_db_folder'],seq['db_name'].split("/")[-1],up+seq['cns_fasta'],up+seq['cns_blast'],num_availible_threads,up)
-            process = subprocess.Popen(cmd, shell=True,stdout=subprocess.PIPE)
-            process.wait()
-            if process.stderr!=None: 
-                for line in process.stderr.readlines(): print line
-            tracker.step().display()
-        tracker.status(None).done()
-
-    #blast_to_bed(cns_blasts) -> cns_locs w/cns_seq_ids
-    header_print("Filtering and converting Blast results to .bed files for each genome.")
-    if not 'cns_locs_folder' in data:
-        data['cns_locs_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_cns_locs/"
-        process = subprocess.Popen("mkdir "+data['cns_locs_folder'], shell=True)
-        process.wait()
-        for seq in data['seqs']:
-            print "%s:"%seq['maf_name']
-            seq['cns_locs'] = data['cns_locs_folder']+seq['maf_name']+".bed"
-            blast_to_bed(seq['cns_blast'],seq['cns_locs'])
-
-    #gff3_to_bed(gff3_files,"gene") -> gene_beds
-    header_print("Converting genomes' .gff gene ranges to .bed file locations.")
-    if not 'gene_bed_folder' in data:
-        data['gene_bed_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_gene_beds/"
-        process = subprocess.Popen("mkdir "+data['gene_bed_folder'], shell=True)
-        process.wait()
-        for seq in data['seqs']:
-            if seq['gff3_file_name']!="":
-                print "%s:"%seq['maf_name']
-                seq['gene_bed'] = data['gene_bed_folder']+seq['maf_name'].split("/")[-1].split(".gff")[0]+"_genes.bed"
-                gff3_to_bed(seq['gff3_file_name'],['gene'],seq['gene_bed'])
-
-    #$bedtools.closest(cns_locs@gene_beds) -> cns_assoc_data w/distance & cns_seq_ids
-    header_print("Checking CNS locations against gene locations.")
-    if not 'cns_assoc_folder' in data:
-        data['cns_assoc_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_cns_assoc/"
-        process = subprocess.Popen("mkdir "+data['cns_assoc_folder'], shell=True)
-        process.wait()
-        tracker = Progress_tracker("Finding associations",len(data['seqs'])).estimate(False).display()
-        for seq in data['seqs']:
-            tracker.status(seq['maf_name'])
-            if seq['gff3_file_name']!="":
-                seq['cns_assoc'] = data['cns_assoc_folder']+seq['maf_name'].split("/")[-1].split(".gff")[0]+"_cns_assoc.bed"
-                cmd = "bedtools closest -D a -a %s -b %s > %s" % (seq['cns_locs'],seq['gene_bed'],seq['cns_assoc'])
-                process = subprocess.Popen(cmd, shell=True)
-                process.wait()
-            tracker.step().display()
-        tracker.status(None).done()
-
-    #!parse_cns_data(data,out) -> cns_assoc_info w/cns_seq_ids
-    header_print("Parsing association data.")
-    if not 'final_results_folder' in data:
-        data['final_results_folder'] = out_folder+data['cns_maf'].split("/")[-1].split(".maf")[0]+"_results/"
-        process = subprocess.Popen("mkdir "+data['final_results_folder'], shell=True)
-        process.wait()
-        parse_cns_data(data,data['final_results_folder'])
-
-    with open(out_folder+"data.json","w") as out:
-        out.write(json.dumps(data, sort_keys=True, indent=4, separators=(',', ': ')))
-
-    #make_figures(data['final_results_folder'])
-    #OUTPUT:
-    #    cns alignment from cns_maf
-    #    location in each species from cns_locs
-    #    closest genes and distance for each species from cns_assoc_info
-    #    catagory from cns_assoc_info
-    header_print("Finished! Results in:%s"%data['final_results_folder'])
-
-def file_run(json_file,out_folder,num_threads_in):
+    info = "Process proximity and maf files into .cns file:"
+    header_print(info)
+    data['results'] = create_path(work_folder,"identified_CNSs","cns",overwrite)
+    cns_proxim_beds = {genome:Bed6(data['genomes'][genome]['gene_proximity_bed']) for genome in data['genomes']}
+    Maf(file_name=data['cns_maf'])\
+        .cns_from_proxim_beds(cns_proxim_beds,"cns_maf_index")
+        .save_file(data['results'])
+    datasaver.save(data)
+    
+def file_run(json_file,work_folder,num_threads,overwrite=False):
     config = None
     with open(json_file) as intructionJSON:
         config = json.load(intructionJSON)
-    if not out_folder.endswith("/"):
-        out_folder+="/"
-    num_threads = int(num_threads_in)
-    main(config,out_folder,num_threads)
+    work_folder = create_path(work_folder,overwrite=overwrite)
+    num_threads = int(num_threads)
+    main(input_data,work_folder,num_threads,overwrite)
+    
+        

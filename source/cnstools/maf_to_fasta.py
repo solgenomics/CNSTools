@@ -1,5 +1,5 @@
-
 from _utils import Progress_tracker
+
 def main(mafFile,outFolder):
 
     fastaChunkBySpecies = {}

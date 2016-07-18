@@ -16,6 +16,36 @@ def header_print(header):
     wall = lambda char: char*70
     safe_print("\n%s\n %s \n%s" % (wall("="),header,wall("~")))
 
+def create_path(path,name=None,extension=None,overwrite=True):
+    try:
+        os.makedirs(path)
+    except OSError:
+        if not os.path.isdir(path):
+            raise
+
+    if not path.endswith("/"):
+        path+="/"
+    if name:
+        path+=name
+    if extension:
+        if not extension.startswith("."):
+            path+="."
+        path+=extension
+
+    if (not overwrite) and os.path.exists(path):
+        raise ValueError("You provided an existing path but asked not to overwrite!")
+
+    return path
+
+class JSON_saver(object):
+    """docstring for JSON_saver"""
+    def __init__(self, path):
+        self.path = path
+    def save(self,data):
+        with open(self.path,'w') as out:
+            json.dump(data,out,sort_keys=True,indent=4)
+        return self
+
 class Progress_tracker():
     def __init__(self,name,size):
         self.name = name

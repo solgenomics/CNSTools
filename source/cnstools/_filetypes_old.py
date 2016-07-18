@@ -1,5 +1,6 @@
-from _utils import Progress_tracker
+"""Module which contains classes for storing the data for each filetype used in cnstools. The filetype classes also have some conversion functions for changing file formats."""
 from abc import ABCMeta, abstractmethod
+from _utils import Progress_tracker
 
 class Serial_Filetype(object):
     """Abstract parent class of all of the filetype functions. The __init__ function here should be called by each subclass."""
@@ -39,6 +40,74 @@ class Serial_Filetype(object):
     def get_lines(self): 
         """Abstract. Should return the entry data formatted as a list of line strings"""
         pass
+
+class Cns_sequence(object):
+    def __init__(self,genome,type,dist,loc_chrom,closest_gene,start,stop,gene_start,gene_stop,sequence,cns_ID=None):
+        self.cns_ID = cns_ID
+        self.genome = genome
+        self.type = type
+        self.dist = int(dist) if dist else None
+        self.loc_chrom = loc_chrom
+        self.closest_gene = closest_gene
+        self.start = int(start) if start else None
+        self.stop = int(stop) if stop else None
+        self.gene_start = int(gene_start) if gene_start else None
+        self.gene_stop = int(gene_stop) if gene_stop else None
+        self.sequence = sequence
+    def get_line(self):
+        strs = (str(i) if i!=None else '.' for i in (self.cns_ID,self.genome,self.type,self.dist,self.loc_chrom,self.closest_gene,self.start,self.stop,self.gene_start,self.gene_stop,self.sequence))
+        return "\t".join(strs)
+    def duplicate(self):
+        return Cns_sequence(self.genome,self.type,self.dist,self.loc_chrom,self.closest_gene,self.start,self.stop,self.gene_start,self.gene_stop,self.sequence,cns_ID=self.cns_ID)
+
+class Cns_entry(object):
+    def __init__(self,cns_ID):
+        self.cns_ID = cns_ID
+        self.sequences = {}
+    def add_seq(self,genome,*args):
+        if not genome in self.sequences: self.sequences[genome] = []
+        self.sequences[genome].append(Cns_sequence(genome,*args,cns_ID=self.cns_ID))
+        return self.sequences[genome][-1]
+    def get_seqs(self,genome=None):
+        if genome==None: return [seq for key in self.sequences for seq in self.sequences[key]]
+        elif not genome in self.sequences: return None
+        else: return self.sequences[genome][:]
+    def get_lines(self):
+        seqs = []
+        for key in self.sequences:
+            seqs+=self.sequences[key]
+        return [seq.get_line() for seq in seqs]
+
+
+class Cns(Serial_Filetype):
+    Entry_class = Cns_entry
+    def add_lines(self,lines):
+        ID=None
+        tracker = Progress_tracker("Parsing .cns",len(lines)).auto_display().start()
+        for line in lines:
+            list = [item if item!='.' else None for item in line.split('\t')]
+            if list[0]!=ID:
+                ID = list[0]
+                self.entries.append(Cns_entry(ID))
+            self.entries[-1].add_seq(*(list[1:]))
+            tracker.step()
+        tracker.done()
+    def get_lines(self):
+        return [line for entry in self.entries for line in entry.get_lines()]
+    def to_fasta(self,sequences=False):
+        """converts the .cns data to multiple .fasta data classes and returns a dict with sequence origin names as keys"""
+        fastas = {}
+        tracker = Progress_tracker("Converting to .fasta files",len(self.entries)).auto_display().start()
+        for entry in self.entries:
+            for seq in [seq for key in entry.sequences for seq in entry.sequences[key]]:
+                if seq.genome not in fastas: fastas[seq.genome] = Fasta()
+                description = "|".join((str(a) for a in (seq.cns_ID,seq.type,seq.loc_chrom,seq.start,seq.stop)))
+                fastas[seq.genome].add_entry(description,seq.sequence.replace("-", ""))
+            tracker.step()
+        tracker.done()
+        return fastas
+
+
 
 class Bed6_entry(object):
     """0-based"""
@@ -103,72 +172,7 @@ class Bed13(Serial_Filetype):
         for entry in self.entries:
             lines.append(entry.get_line())
         return lines
-
-class Cns_sequence(object):
-    def __init__(self,genome,type,dist,loc_chrom,closest_gene,start,stop,gene_start,gene_stop,sequence,cns_ID=None):
-        self.cns_ID = cns_ID
-        self.genome = genome
-        self.type = type
-        self.dist = int(dist) if dist else None
-        self.loc_chrom = loc_chrom
-        self.closest_gene = closest_gene
-        self.start = int(start) if start else None
-        self.stop = int(stop) if stop else None
-        self.gene_start = int(gene_start) if gene_start else None
-        self.gene_stop = int(gene_stop) if gene_stop else None
-        self.sequence = sequence
-    def get_line(self):
-        strs = (str(i) if i!=None else '.' for i in (self.cns_ID,self.genome,self.type,self.dist,self.loc_chrom,self.closest_gene,self.start,self.stop,self.gene_start,self.gene_stop,self.sequence))
-        return "\t".join(strs)
-    def duplicate(self):
-        return Cns_sequence(self.genome,self.type,self.dist,self.loc_chrom,self.closest_gene,self.start,self.stop,self.gene_start,self.gene_stop,self.sequence,cns_ID=self.cns_ID)
-
-class Cns_entry(object):
-    def __init__(self,cns_ID):
-        self.cns_ID = cns_ID
-        self.sequences = {}
-    def add_seq(self,genome,*args):
-        if not genome in self.sequences: self.sequences[genome] = []
-        self.sequences[genome].append(Cns_sequence(genome,*args,cns_ID=self.cns_ID))
-        return self.sequences[genome][-1]
-    def get_seqs(self,genome=None):
-        if genome==None: return [seq for key in self.sequences for seq in self.sequences[key]]
-        elif not genome in self.sequences: return None
-        else: return self.sequences[genome][:]
-    def get_lines(self):
-        seqs = []
-        for key in self.sequences:
-            seqs+=self.sequences[key]
-        return [seq.get_line() for seq in seqs]
-
-class Cns(Serial_Filetype):
-    Entry_class = Cns_entry
-    def add_lines(self,lines):
-        ID=None
-        tracker = Progress_tracker("Parsing .cns",len(lines)).auto_display().start()
-        for line in lines:
-            list = [item if item!='.' else None for item in line.split('\t')]
-            if list[0]!=ID:
-                ID = list[0]
-                self.entries.append(Cns_entry(ID))
-            self.entries[-1].add_seq(*(list[1:]))
-            tracker.step()
-        tracker.done()
-    def get_lines(self):
-        return [line for entry in self.entries for line in entry.get_lines()]
-    def to_fasta(self,sequences=False):
-        """converts the .cns data to multiple .fasta data classes and returns a dict with sequence origin names as keys"""
-        fastas = {}
-        tracker = Progress_tracker("Converting to .fasta files",len(self.entries)).auto_display().start()
-        for entry in self.entries:
-            for seq in [seq for key in entry.sequences for seq in entry.sequences[key]]:
-                if seq.genome not in fastas: fastas[seq.genome] = Fasta()
-                description = "|".join((str(a) for a in (seq.cns_ID,seq.type,seq.loc_chrom,seq.start,seq.stop)))
-                fastas[seq.genome].add_entry(description,seq.sequence.replace("-", ""))
-            tracker.step()
-        tracker.done()
-        return fastas
-
+        
 class BlastF6_entry(object):
     """1-based"""
     def __init__(self,query,target,identity,length,mismatches,gapOpens,queryStart,queryEnd,targetStart,targetEnd,eVal,bitScore):
@@ -221,41 +225,6 @@ class BlastF6(Serial_Filetype):
         tracker.done()
         return new_bed
 
-class Fasta_entry(object):
-    def __init__(self,description,sequence):
-        self.description = description
-        self.sequence = sequence
-    def get_lines(self):
-        return [">"+self.description]+[self.sequence[i:i+70] for i in range(0,len(self.sequence),70)]
-
-class Fasta(Serial_Filetype):
-    """docstring for Fasta"""
-    Entry_class = Fasta_entry
-    def add_lines(self,lines):
-        paragraphs = [[]]
-        first_found = False
-        tracker = Progress_tracker("Parsing .fasta data",len(lines*2)).auto_display().start()
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith('>'):
-                first_found = True
-                paragraphs[-1].append(stripped[1:])
-            elif first_found:
-                paragraphs[-1].append(stripped)
-            tracker.step()
-        for paragraph in paragraphs:
-            for item in paragraph[1:]:
-                if not type(item) is str:
-                    raise TypeError (str(item))
-            self.entries.append(Fasta_entry(paragraph[0],"".join(paragraph[1:])))
-            tracker.step(len(paragraph))
-        tracker.done()
-    def get_lines(self):
-        lines = []
-        for entry in self.entries:
-            lines+= entry.get_lines()
-        return lines
-
 class Gff3_entry(object):
     """1-based"""
     def __init__(self,seqid,source,type,start,end,score,strand,phase,attributes):
@@ -292,7 +261,7 @@ class Gff3(Serial_Filetype):
         for entry in self.entries:
             lines.append(entry.get_line())
         return lines
-    def to_bed(self,type_list=None,genome=None):
+    def to_bed(self,type_list=None):
         new_bed = Bed6()
         entry_selection = None
         if(type_list):
@@ -306,8 +275,7 @@ class Gff3(Serial_Filetype):
             else:
                 chromStart,chromEnd = entry.end,entry.start
             id_with_type = entry.attributes+";seqType="+entry.type
-            chrom = entry.seqid if not genome else genome+":"+entry.seqid
-            new_bed.add_entry(chrom, chromStart-1, chromEnd, name=id_with_type, score=entry.score, strand=entry.strand)
+            new_bed.add_entry(entry.seqid, chromStart-1, chromEnd, name=id_with_type, score=entry.score, strand=entry.strand)
             tracker.step()
         tracker.done()
         return new_bed
@@ -370,7 +338,6 @@ class Maf_entry(object):
 class Maf(Serial_Filetype):
     """0-based"""
     Entry_class = Maf_entry
-
     def add_lines(self,lines):
         if not hasattr(self, 'headerLines'): self.headerLines = []
         paragraph = []
@@ -387,15 +354,13 @@ class Maf(Serial_Filetype):
                 paragraph.append(stripped)
             tracker.step()
         tracker.done()
-
     def get_lines(self):
         lines = []
         for entry in self.entries:
             lines+=entry.get_lines()
             lines.append("")
         return lines
-
-    def to_bed(self,seq_name=None,index_tag="maf_index"):
+    def to_bed(self,seq_name=None,index_tag=None):
         new_bed = Bed6()
         tracker = Progress_tracker("Converting to .bed",len(self.entries)).auto_display().start()
         if not seq_name: 
@@ -412,7 +377,6 @@ class Maf(Serial_Filetype):
             tracker.step()
         tracker.done()
         return new_bed
-
     def slice_with_bed(self,bed,ref_genome,index_tag,max_N_ratio=0.5,max_gap_ratio=0.5,min_len=15):
         new_maf = Maf()
         new_maf.headerlines = self.headerLines[:]
@@ -458,43 +422,6 @@ class Maf(Serial_Filetype):
                 new_maf.entries.append(new_maf_entry)
         return new_maf
 
-    def cns_from_proxim_beds(self,cns_proxim_beds,index_tag="maf_index"):
-        cns = Cns()
-        for i in range(len(self.entries)):
-            cns.add_entry(i)
-        for genome in cns_proxim_beds:
-            for entry in cns_proxim_beds[genome].entries:
-                try:
-                    kv = (nam for nam in entry.first.name.split(";") if nam.find(index_tag)!=-1).next()
-                except StopIteration:
-                    raise ValueError("The provided index_tag was not found in a bed entry.")
-
-                cns_index = int(kv.split('=')[1].strip())
-                cns_entry = cns.entries[cns_index]
-
-                loc_chrom = entry.first.chrom
-                closest_gene = entry.second.name
-                start = entry.first.chromStart
-                stop = entry.first.chromEnd
-                gene_start = entry.second.chromStart
-                gene_stop = entry.second.chromEnd
-
-                try:
-                    sequence_text = (sequence.text for sequence in self.entries[cns_index].sequences if sequence.src == loc_chrom).next()
-                except StopIteration:
-                    raise ValueError("Missing sequence information in .maf file.")
-
-                dist = entry.score
-                cns_type = "???"
-                if(abs(dist)<=1000):
-                    if   dist>0 or start==gene_stop: cns_type = "downstream"
-                    elif dist<0 or stop==gene_start: cns_type = "upstream"
-                    elif dist==0: cns_type = "intronic"
-                else:
-                    cns_type = "intergenic"
-
-                cns_entry.add_seq(genome,cns_type,dist,loc_chrom,closest_gene,start,stop,gene_start,gene_stop,sequence_text)
-        return cns
 
     @staticmethod
     def _gap_cut_loc(seq,cutNum):
@@ -503,6 +430,43 @@ class Maf(Serial_Filetype):
         return eliminated.find("x") # finds the index of the next x, which is how many chars to cut off
     @staticmethod
     def _no_gap_len(seq): return len(seq[:].replace("-",""))
+
+
+
+class Fasta_entry(object):
+    def __init__(self,description,sequence):
+        self.description = description
+        self.sequence = sequence
+    def get_lines(self):
+        return [">"+self.description]+[self.sequence[i:i+70] for i in range(0,len(self.sequence),70)]
+
+class Fasta(Serial_Filetype):
+    """docstring for Fasta"""
+    Entry_class = Fasta_entry
+    def add_lines(self,lines):
+        paragraphs = [[]]
+        first_found = False
+        tracker = Progress_tracker("Parsing .fasta data",len(lines*2)).auto_display().start()
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('>'):
+                first_found = True
+                paragraphs[-1].append(stripped[1:])
+            elif first_found:
+                paragraphs[-1].append(stripped)
+            tracker.step()
+        for paragraph in paragraphs:
+            for item in paragraph[1:]:
+                if not type(item) is str:
+                    raise TypeError (str(item))
+            self.entries.append(Fasta_entry(paragraph[0],"".join(paragraph[1:])))
+            tracker.step(len(paragraph))
+        tracker.done()
+    def get_lines(self):
+        lines = []
+        for entry in self.entries:
+            lines+= entry.get_lines()
+        return lines
 
 class Tomtom_match(object):
     def __init__(self,query_id,target_id,optimal_offset,p_value,e_value,q_value,overlap,query_consensus,target_consensus,orientation):
@@ -612,3 +576,6 @@ class Meme_v_4(Serial_Filetype):
             return self.entry_dict[identifier]
         else:
             return None
+        
+
+        

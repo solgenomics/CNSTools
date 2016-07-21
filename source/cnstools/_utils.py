@@ -1,15 +1,17 @@
 import time
 import sys
+import os
 import threading
+import json
 
 def safe_print(content,print_id=None):
     sys.stdout.flush()
     if not hasattr(safe_print, "print_id"): 
         safe_print.print_id = print_id
     elif safe_print.print_id != print_id:
-        print "\n"
+        sys.stderr.write("\n")
         safe_print.print_id = print_id
-    print str(content)
+    sys.stderr.write(str(content)+"\n")
     sys.stdout.flush()
 
 def header_print(header):
@@ -49,7 +51,7 @@ class JSON_saver(object):
 class Progress_tracker():
     def __init__(self,name,size):
         self.name = name
-        self.size = size
+        self.size = size if size!=0 else 1
         self.estimate_on = True
         self.status_message = None
         self.steps = 0

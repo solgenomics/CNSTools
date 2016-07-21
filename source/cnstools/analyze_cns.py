@@ -2,6 +2,7 @@
 """
 
 from _filetypes import Cns
+import _utils
 import numpy as np
 import scipy as sp
 import matplotlib as mpl
@@ -19,9 +20,10 @@ def main(cns,task_list):
     :type cns: :class:`.Cns`
     :returns:  `None`
     """
-    if "count" in task_list: print len("%s CNSs" % cns.entries)
+    if "count" in task_list: 
+        print len("%s CNSs" % cns.entries)
 
-    if "types" in task_list:
+    if "type_conditional_probs" in task_list:
         list_of_cns_types = ["intergenic","intronic","downstream","upstream"]
         numGenoms = 2
 
@@ -34,7 +36,7 @@ def main(cns,task_list):
             entry_count_dict = {}
             entry_pair_counts = {}
             for seq in entry.get_seqs():
-                if seq.genome=="chr1" or seq.genome=="Gmax":
+                if (seq.genome=="Metru" or seq.genome=="Glmax"):
                     t = seq.type if seq.type!=None else "unknown"
                     if t not in entry_count_dict: 
                         entry_count_dict[t] = 0
@@ -51,12 +53,12 @@ def main(cns,task_list):
             for key in entry_pair_counts:
                 type_pair_count_dict[key]+=entry_pair_counts[key]
 
-
+        print type_count_dict
         type_prob_dict = {key:type_count_dict[key]/float(numGenoms*len(cns.entries)) for key in type_count_dict}
 
         type_pair_prob_dict = {key:type_pair_count_dict[key]/float(numGenoms*(numGenoms-1)*len(cns.entries)) for key in type_pair_count_dict}
 
-        type_conditional_prob_dict = {key:type_pair_prob_dict[key]/type_prob_dict[key[0]] for key in type_pair_prob_dict}
+        type_conditional_prob_dict = {key:type_pair_prob_dict[key]/(type_prob_dict[key[0]] if type_prob_dict[key[0]]!=0 else float('inf')) for key in type_pair_prob_dict}
 
         conditional_prob_array = [[0]*len(list_of_cns_types) for i in range(len(list_of_cns_types))]
         for i in range(len(list_of_cns_types)):
@@ -105,16 +107,6 @@ def main(cns,task_list):
                 typefreqs[t][nuc] = typefreqs[t][nuc]/float(typefreqs[t]['__denom'])
             del typefreqs[t]['__denom']
         _multi_bar_graph(typefreqs,"nucleotide_freq_graph.svg")
-
-def _scatter(data,out_file_path):
-    plt.clf()
-    twoDArr = data
-    unzipped = zip(*twoDArr)
-    plt.scatter(unzipped[1],unzipped[0])
-    plt.xlabel('')
-    plt.ylabel('')
-    plt.grid(True)
-    plt.savefig(out_file_path, bbox_inches='tight')
 
 def _heatmap_histogram(data,out_file_path):
     plt.clf()
@@ -180,9 +172,7 @@ def _multi_bar_graph(dict_dict,out_file_path):
     plt.legend(loc='upper right')
     plt.savefig(out_file_path, bbox_inches='tight')
 
-
-
-def file_run(cns_file,*tasks): 
+def run(cns_file,*tasks):
     """This function is for running the workflow on a file and not a :class:`.Cns` object. 
     It creates a :class:`.Cns` object from the file `cns_file` and compiles the `tasks` arguements into a list of strings then calls :func:`.main` using them.
     
@@ -191,7 +181,7 @@ def file_run(cns_file,*tasks):
     :returns:  `None`
     """
     task_list = list(tasks)
-    print task_list
+    _utils.safe_print(task_list)
     cns = Cns()
     with open(cns_file) as file:
         cns.add_lines(file.readlines())

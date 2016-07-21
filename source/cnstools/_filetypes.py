@@ -1,4 +1,4 @@
-from _utils import Progress_tracker
+from _utils import Progress_tracker,safe_print
 from abc import ABCMeta, abstractmethod
 
 class Serial_Filetype(object):
@@ -169,93 +169,6 @@ class Cns(Serial_Filetype):
         tracker.done()
         return fastas
 
-class BlastF6_entry(object):
-    """1-based"""
-    def __init__(self,query,target,identity,length,mismatches,gapOpens,queryStart,queryEnd,targetStart,targetEnd,eVal,bitScore):
-        #super(BlastF6_entry, self).__init__()
-        self.query = query
-        self.target = target
-        self.identity = float(identity)
-        self.length = int(length)
-        self.mismatches = int(mismatches)
-        self.gapOpens = int(gapOpens)
-        self.queryStart = int(queryStart)
-        self.queryEnd = int(queryEnd)
-        self.targetStart = int(targetStart)
-        self.targetEnd = int(targetEnd)
-        self.eVal = float(eVal)
-        self.bitScore = float(bitScore)
-    def get_line(self):
-        return "\t".join([str(item) for item in (self.query,self.target,self.identity,self.length,self.mismatches,self.gapOpens,self.queryStart,self.queryEnd,self.targetStart,self.targetEnd,self.eVal,self.bitScore)])
-
-class BlastF6(Serial_Filetype):
-    """1-based"""
-    Entry_class = BlastF6_entry
-    def add_lines(self,lines):
-        tracker = Progress_tracker("Parsing blast output",len(lines)).auto_display().start()
-        for line in lines:
-            fields = line.strip().split('\t')
-            if (len(fields)==12):
-                self.entries.append(BlastF6_entry(*fields))
-            tracker.step()
-        tracker.done()
-    def get_lines(self):
-        lines = []
-        for entry in self.entries:
-            lines.append(entry.get_line())
-        return lines
-    def to_bed(self):
-        new_bed = Bed6()
-        tracker = Progress_tracker("Converting to .bed",len(self.entries)).auto_display().start()
-        for entry in self.entries:
-            strand = None
-            if entry.targetStart < entry.targetEnd:
-                start, end = entry.targetStart, entry.targetEnd
-                strand = '+'
-            else:
-                start, end = entry.targetEnd, entry.targetStart
-                strand = '-'
-            #convert to 0-based!
-            new_bed.add_entry(entry.target, start-1, end, entry.query, entry.bitScore, strand)
-            tracker.step()
-        tracker.done()
-        return new_bed
-
-class Fasta_entry(object):
-    def __init__(self,description,sequence):
-        self.description = description
-        self.sequence = sequence
-    def get_lines(self):
-        return [">"+self.description]+[self.sequence[i:i+70] for i in range(0,len(self.sequence),70)]
-
-class Fasta(Serial_Filetype):
-    """docstring for Fasta"""
-    Entry_class = Fasta_entry
-    def add_lines(self,lines):
-        paragraphs = [[]]
-        first_found = False
-        tracker = Progress_tracker("Parsing .fasta data",len(lines*2)).auto_display().start()
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith('>'):
-                first_found = True
-                paragraphs[-1].append(stripped[1:])
-            elif first_found:
-                paragraphs[-1].append(stripped)
-            tracker.step()
-        for paragraph in paragraphs:
-            for item in paragraph[1:]:
-                if not type(item) is str:
-                    raise TypeError (str(item))
-            self.entries.append(Fasta_entry(paragraph[0],"".join(paragraph[1:])))
-            tracker.step(len(paragraph))
-        tracker.done()
-    def get_lines(self):
-        lines = []
-        for entry in self.entries:
-            lines+= entry.get_lines()
-        return lines
-
 class Gff3_entry(object):
     """1-based"""
     def __init__(self,seqid,source,type,start,end,score,strand,phase,attributes):
@@ -312,18 +225,6 @@ class Gff3(Serial_Filetype):
         tracker.done()
         return new_bed
 
-class Gff2(Gff3):
-    def add_lines(self,lines):
-        tracker = Progress_tracker("Parsing .gff3",len(lines)).auto_display().start()
-        for line in lines:
-            if not line.startswith('#'):
-                fields = [i for i in line.strip().split('\t') if i!='']
-                if (len(fields)==8):
-                    fields = fields[:2]+["?"]+fields[2:] #unknown type!
-                    self.entries.append(Gff3_entry(*fields))
-            tracker.step()
-        tracker.done()
-
 class Maf_sequence(object):
     def __init__(self,src,start,size,strand,srcSize,text,metadata=None):
         self.src = src
@@ -334,8 +235,8 @@ class Maf_sequence(object):
         self.text = text
         self.metadata = metadata
     def get_lines(self):
-        lines = ['##'+metadata] if metadata else []
-        lines.append('\t'.join([str(item) for item in [self.src,self.start,self.size,self.strand,self.srcSize,self.text]]))
+        lines = ['##'+self.metadata] if self.metadata else []
+        lines.append('s '+'\t'.join([str(item) for item in [self.src,self.start,self.size,self.strand,self.srcSize,self.text]]))
         return lines
         
 class Maf_entry(object):
@@ -395,15 +296,15 @@ class Maf(Serial_Filetype):
             lines.append("")
         return lines
 
-    def to_bed(self,seq_name=None,index_tag="maf_index"):
+    def to_bed(self,genome_name=None,index_tag="maf_index"):
         new_bed = Bed6()
         tracker = Progress_tracker("Converting to .bed",len(self.entries)).auto_display().start()
-        if not seq_name: 
-            seq_name=self.entries[0].sequences[0].src.split(":")[0]
+        if not genome_name: 
+            genome_name=self.entries[0].sequences[0].src.split(":")[0].strip()
         index = 0
         for entry in self.entries:
-            seq_to_convert = (seq for seq in entry.sequences if seq.src.split(":")[0]==seq_name)
-            for sequence in seqs_to_convert:
+            seq_to_convert = (seq for seq in entry.sequences if seq.src.split(":")[0].strip()==genome_name)
+            for sequence in seq_to_convert:
                 id_string = "%s=%s" % (index_tag,index) if index_tag!=None else None
                 if sequence.metadata:
                     id_string = (sequence.metadata+";"+id_string) if id_string else (sequence.metadata)
@@ -429,30 +330,31 @@ class Maf(Serial_Filetype):
             new_maf_entry.a_meta = original_maf_entry.a_meta
 
             try:
-                mainseq = (seq for seq in original_maf_entry.sequences if seq.chrom.split(":")[0].strip()==ref_genome).next()
+                mainseq = (seq for seq in original_maf_entry.sequences if seq.src.split(":")[0].strip()==ref_genome).next()
             except StopIteration:
                 raise ValueError("The provided ref_genome was not found in an alignment.")
 
-            front_offset = bed.chromStart - ref_seq.start
-            back_offset = ref_seq.stop - bed.chromEnd
-            front_cut_num = Maf._gap_cut_loc(ref_seq.text,front_offset)
-            back_cut_num = Maf._gap_cut_loc(reversed(ref_seq.text),back_offset)
+            front_offset = bed_entry.chromStart - mainseq.start
+            back_offset = mainseq.start+mainseq.size - bed_entry.chromEnd
+            front_cut_num = Maf._gap_cut_loc(mainseq.text,front_offset)
+            back_cut_num = Maf._gap_cut_loc(reversed(mainseq.text),back_offset)
 
             for seq in original_maf_entry.sequences:
-                front_removed_seq = original_maf_entry.text[:front_cut_num]
-                new_seq = (original_maf_entry.text[front_cut_num:-back_cut_num]) if back_cut_num!=0 else (original_maf_entry.text[front_cut_num:])
+                front_removed_seq = seq.text[:front_cut_num]
+                new_seq = (seq.text[front_cut_num:-back_cut_num]) if back_cut_num!=0 else (seq.text[front_cut_num:])
                 new_len = Maf._no_gap_len(new_seq)
-                new_start = original_maf_entry.start + Maf._no_gap_len(front_removed_seq)
-                if 1-(new_len/len(new_seq)) <= max_gap_ratio:
-                    if 1-Maf._no_gap_len(new_seq.replace('N',''))/new_len <= max_N_ratio:    
+                new_start = seq.start + Maf._no_gap_len(front_removed_seq)
+                is_ref_seq = seq.src.split(":")[0].strip()==ref_genome
+                if is_ref_seq or 1-(new_len/float(len(new_seq))) <= max_gap_ratio:
+                    if is_ref_seq or 1-Maf._no_gap_len(new_seq.replace('N',''))/float(new_len) <= max_N_ratio:    
                         new_seq = Maf_sequence(
-                            original_maf_entry.src,
+                            seq.src,
                             new_start,
                             new_len,
-                            original_maf_entry.strand,
-                            original_maf_entry.srcSize,
+                            seq.strand,
+                            seq.srcSize,
                             new_seq,
-                            original_maf_entry.metadata)
+                            seq.metadata)
                         new_maf_entry.sequences.append(new_seq)
             if len(new_maf_entry.sequences) > 1 and any((seq.size>=min_len for seq in new_maf_entry.sequences)):
                 new_maf.entries.append(new_maf_entry)
@@ -504,111 +406,210 @@ class Maf(Serial_Filetype):
     @staticmethod
     def _no_gap_len(seq): return len(seq[:].replace("-",""))
 
-class Tomtom_match(object):
-    def __init__(self,query_id,target_id,optimal_offset,p_value,e_value,q_value,overlap,query_consensus,target_consensus,orientation):
-        self.query_id = query_id
-        self.target_id = target_id
-        self.optimal_offset = optimal_offset
-        self.p_value = p_value
-        self.e_value = e_value
-        self.q_value = q_value
-        self.overlap = overlap
-        self.query_consensus = query_consensus
-        self.target_consensus = target_consensus
-        self.orientation = orientation
-    def get_line(self):
-        return "\t".join((self.query_id,self.target_id,self.optimal_offset,self.p_value,self.e_value,self.q_value,self.overlap,self.query_consensus,self.target_consensus,self.orientation))
+# class Tomtom_match(object):
+#     def __init__(self,query_id,target_id,optimal_offset,p_value,e_value,q_value,overlap,query_consensus,target_consensus,orientation):
+#         self.query_id = query_id
+#         self.target_id = target_id
+#         self.optimal_offset = optimal_offset
+#         self.p_value = p_value
+#         self.e_value = e_value
+#         self.q_value = q_value
+#         self.overlap = overlap
+#         self.query_consensus = query_consensus
+#         self.target_consensus = target_consensus
+#         self.orientation = orientation
+#     def get_line(self):
+#         return "\t".join((self.query_id,self.target_id,self.optimal_offset,self.p_value,self.e_value,self.q_value,self.overlap,self.query_consensus,self.target_consensus,self.orientation))
 
-class Tomtom_entry(object):
-    def __init__(self,lines):
-        lists = [line.split("\t") for line in lines]
-        self.query_id = lists[0][0]
-        self.query_consensus = lists[0][7]
-        self.matches = [Tomtom_match(*list) for list in lists]
-    def get_lines(self):
-        return [match.get_line() for match in self.matches]
+# class Tomtom_entry(object):
+#     def __init__(self,lines):
+#         lists = [line.split("\t") for line in lines]
+#         self.query_id = lists[0][0]
+#         self.query_consensus = lists[0][7]
+#         self.matches = [Tomtom_match(*list) for list in lists]
+#     def get_lines(self):
+#         return [match.get_line() for match in self.matches]
 
-class Tomtom(Serial_Filetype):
-    """docstring for Tomtom"""
-    Entry_class = Tomtom_entry
-    def add_lines(self,lines):
-        lines = [line.strip() for line in lines]
-        paragraphs = []
-        self.header = []
-        last_ID = None
-        for line in lines:
-            if not line.startswith("#"):
-                this_ID = line[:line.find('\t')]
-                if this_ID!=last_ID:
-                    last_ID = this_ID
-                    paragraphs.append([])
-                if not this_ID==None:
-                    paragraphs[-1].append(line)
-            else:
-                self.header.append(line)
-        for paragraph in paragraphs:
-            if(len(paragraph)>0):
-                self.entries.append(Tomtom_entry(paragraph))
-    def get_lines(self):
-        lines = self.header
-        for entry in self.entries:
-            lines+= entry.get_lines()
-        return lines
+# class Tomtom(Serial_Filetype):
+#     """docstring for Tomtom"""
+#     Entry_class = Tomtom_entry
+#     def add_lines(self,lines):
+#         lines = [line.strip() for line in lines]
+#         paragraphs = []
+#         self.header = []
+#         last_ID = None
+#         for line in lines:
+#             if not line.startswith("#"):
+#                 this_ID = line[:line.find('\t')]
+#                 if this_ID!=last_ID:
+#                     last_ID = this_ID
+#                     paragraphs.append([])
+#                 if not this_ID==None:
+#                     paragraphs[-1].append(line)
+#             else:
+#                 self.header.append(line)
+#         for paragraph in paragraphs:
+#             if(len(paragraph)>0):
+#                 self.entries.append(Tomtom_entry(paragraph))
+#     def get_lines(self):
+#         lines = self.header
+#         for entry in self.entries:
+#             lines+= entry.get_lines()
+#         return lines
 
-class Meme_v_4_entry(object):
-    def __init__(self,lines):
-        start_index = 0
-        while not lines[start_index].startswith('MOTIF'):
-            start_index+=1
-        idList = lines[start_index].split()
-        self.identifier = idList[1]
-        self.alt_name = idList[2]
-        self.lines = lines
-    def get_lines(self):
-        return self.lines
+# class Meme_v_4_entry(object):
+#     def __init__(self,lines):
+#         start_index = 0
+#         while not lines[start_index].startswith('MOTIF'):
+#             start_index+=1
+#         idList = lines[start_index].split()
+#         self.identifier = idList[1]
+#         self.alt_name = idList[2]
+#         self.lines = lines
+#     def get_lines(self):
+#         return self.lines
 
-class Meme_v_4(Serial_Filetype):
-    Entry_class = Meme_v_4_entry
-    def __init__(self,*args,**kwargs):
-        if not hasattr(self,"entry_dict"):
-            self.entry_dict = {}
-        if not hasattr(self,"header"):
-            self.header = []
-        super(Meme_v_4, self).__init__(*args,**kwargs)
-    def add_lines(self,lines):
-        lines = [line.strip() for line in lines]
-        header_end = 0
-        while not lines[header_end].startswith('MOTIF'):
-            header_end+=1
-        self.header+= lines[:header_end]
-        paragraphs = []
-        first_found = False
-        for line in lines[header_end:]:
-            if line.startswith('MOTIF'):
-                paragraphs.append([])
-                first_found = True
-            if first_found:
-                paragraphs[-1].append(line)
-        for paragraph in paragraphs:
-            if(len(paragraph)>1):
-                self.entries.append(self.Entry_class(paragraph))
-                self.entry_dict[self.entries[-1].identifier] = self.entries[-1]
-    def get_lines(self):
-        lines = self.header
-        for entry in self.entries:
-            lines+= entry.get_lines()
-        return lines
-    def add_entry(self,lines=None,entry=None): 
-        if entry!=None:
-            self.entries.append(entry)
-        elif lines!=None:
-            self.entries.append(self.Entry_class(lines))
-        else:
-            return None
-        self.entry_dict[self.entries[-1].identifier] = self.entries[-1]
-        return self.entries[-1]
-    def lookup(self,identifier):
-        if identifier in self.entry_dict:
-            return self.entry_dict[identifier]
-        else:
-            return None
+# class Meme_v_4(Serial_Filetype):
+#     Entry_class = Meme_v_4_entry
+#     def __init__(self,*args,**kwargs):
+#         if not hasattr(self,"entry_dict"):
+#             self.entry_dict = {}
+#         if not hasattr(self,"header"):
+#             self.header = []
+#         super(Meme_v_4, self).__init__(*args,**kwargs)
+#     def add_lines(self,lines):
+#         lines = [line.strip() for line in lines]
+#         header_end = 0
+#         while not lines[header_end].startswith('MOTIF'):
+#             header_end+=1
+#         self.header+= lines[:header_end]
+#         paragraphs = []
+#         first_found = False
+#         for line in lines[header_end:]:
+#             if line.startswith('MOTIF'):
+#                 paragraphs.append([])
+#                 first_found = True
+#             if first_found:
+#                 paragraphs[-1].append(line)
+#         for paragraph in paragraphs:
+#             if(len(paragraph)>1):
+#                 self.entries.append(self.Entry_class(paragraph))
+#                 self.entry_dict[self.entries[-1].identifier] = self.entries[-1]
+#     def get_lines(self):
+#         lines = self.header
+#         for entry in self.entries:
+#             lines+= entry.get_lines()
+#         return lines
+#     def add_entry(self,lines=None,entry=None): 
+#         if entry!=None:
+#             self.entries.append(entry)
+#         elif lines!=None:
+#             self.entries.append(self.Entry_class(lines))
+#         else:
+#             return None
+#         self.entry_dict[self.entries[-1].identifier] = self.entries[-1]
+#         return self.entries[-1]
+#     def lookup(self,identifier):
+#         if identifier in self.entry_dict:
+#             return self.entry_dict[identifier]
+#         else:
+#             return None
+
+# class BlastF6_entry(object):
+#     """1-based"""
+#     def __init__(self,query,target,identity,length,mismatches,gapOpens,queryStart,queryEnd,targetStart,targetEnd,eVal,bitScore):
+#         #super(BlastF6_entry, self).__init__()
+#         self.query = query
+#         self.target = target
+#         self.identity = float(identity)
+#         self.length = int(length)
+#         self.mismatches = int(mismatches)
+#         self.gapOpens = int(gapOpens)
+#         self.queryStart = int(queryStart)
+#         self.queryEnd = int(queryEnd)
+#         self.targetStart = int(targetStart)
+#         self.targetEnd = int(targetEnd)
+#         self.eVal = float(eVal)
+#         self.bitScore = float(bitScore)
+#     def get_line(self):
+#         return "\t".join([str(item) for item in (self.query,self.target,self.identity,self.length,self.mismatches,self.gapOpens,self.queryStart,self.queryEnd,self.targetStart,self.targetEnd,self.eVal,self.bitScore)])
+
+# class BlastF6(Serial_Filetype):
+#     """1-based"""
+#     Entry_class = BlastF6_entry
+#     def add_lines(self,lines):
+#         tracker = Progress_tracker("Parsing blast output",len(lines)).auto_display().start()
+#         for line in lines:
+#             fields = line.strip().split('\t')
+#             if (len(fields)==12):
+#                 self.entries.append(BlastF6_entry(*fields))
+#             tracker.step()
+#         tracker.done()
+#     def get_lines(self):
+#         lines = []
+#         for entry in self.entries:
+#             lines.append(entry.get_line())
+#         return lines
+#     def to_bed(self):
+#         new_bed = Bed6()
+#         tracker = Progress_tracker("Converting to .bed",len(self.entries)).auto_display().start()
+#         for entry in self.entries:
+#             strand = None
+#             if entry.targetStart < entry.targetEnd:
+#                 start, end = entry.targetStart, entry.targetEnd
+#                 strand = '+'
+#             else:
+#                 start, end = entry.targetEnd, entry.targetStart
+#                 strand = '-'
+#             #convert to 0-based!
+#             new_bed.add_entry(entry.target, start-1, end, entry.query, entry.bitScore, strand)
+#             tracker.step()
+#         tracker.done()
+#         return new_bed
+
+# class Fasta_entry(object):
+#     def __init__(self,description,sequence):
+#         self.description = description
+#         self.sequence = sequence
+#     def get_lines(self):
+#         return [">"+self.description]+[self.sequence[i:i+70] for i in range(0,len(self.sequence),70)]
+
+# class Fasta(Serial_Filetype):
+#     """docstring for Fasta"""
+#     Entry_class = Fasta_entry
+#     def add_lines(self,lines):
+#         paragraphs = [[]]
+#         first_found = False
+#         tracker = Progress_tracker("Parsing .fasta data",len(lines*2)).auto_display().start()
+#         for line in lines:
+#             stripped = line.strip()
+#             if stripped.startswith('>'):
+#                 first_found = True
+#                 paragraphs[-1].append(stripped[1:])
+#             elif first_found:
+#                 paragraphs[-1].append(stripped)
+#             tracker.step()
+#         for paragraph in paragraphs:
+#             for item in paragraph[1:]:
+#                 if not type(item) is str:
+#                     raise TypeError (str(item))
+#             self.entries.append(Fasta_entry(paragraph[0],"".join(paragraph[1:])))
+#             tracker.step(len(paragraph))
+#         tracker.done()
+#     def get_lines(self):
+#         lines = []
+#         for entry in self.entries:
+#             lines+= entry.get_lines()
+#         return lines
+
+# class Gff2(Gff3):
+#     def add_lines(self,lines):
+#         tracker = Progress_tracker("Parsing .gff3",len(lines)).auto_display().start()
+#         for line in lines:
+#             if not line.startswith('#'):
+#                 fields = [i for i in line.strip().split('\t') if i!='']
+#                 if (len(fields)==8):
+#                     fields = fields[:2]+["?"]+fields[2:] #unknown type!
+#                     self.entries.append(Gff3_entry(*fields))
+#             tracker.step()
+#         tracker.done()

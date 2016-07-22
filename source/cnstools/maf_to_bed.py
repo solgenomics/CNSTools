@@ -2,11 +2,14 @@ from _filetypes import Maf, Bed6
 import sys
 
 import argparse
-parser = argparse.ArgumentParser("maf_to_bed")
-parser.add_argument("maf_file", help="Path to maf file.")
-parser.add_argument("-o", "--bed_out", default=None, help="Path to output (bed file). If not provided, program outputs to stdout.")
-parser.add_argument("-r", "--ref_genome", default=None, help="Reference genome in the maf file to convert locations for.")
-parser.add_argument("-t", "--index_tag", default=None, help="Adds TAG=INDEX to the bed entry name where INDEX is the index of maf entry in the input file and TAG is the provided string.")
+
+def parser(parser_add_func,name):
+    p = parser_add_func(name,description="Converts a maf file into a bed file. If no output path is provided, outputs to stdout.")
+    p.add_argument("maf_file", help="Path to maf file.")
+    p.add_argument("-o", "--bed_out", default=None, help="Path to output (bed file). If not provided, program outputs to stdout.")
+    p.add_argument("-r", "--ref_genome", default=None, help="Reference genome in the maf file to convert locations for.")
+    p.add_argument("-t", "--index_tag", default=None, help="Adds TAG=INDEX to the bed entry name where INDEX is the index of maf entry in the input file and TAG is the provided string.")
+    return p
 
 def run(maf_file,bed_out=None,ref_genome=None,index_tag=None):
     """Converts a maf file into a bed file. If no output path is provided, outputs to stdout.

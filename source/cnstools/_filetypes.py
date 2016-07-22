@@ -147,7 +147,7 @@ class Cns(Serial_Filetype):
         ID=None
         tracker = Progress_tracker("Parsing .cns",len(lines)).auto_display().start()
         for line in lines:
-            list = [item if item!='.' else None for item in line.split('\t')]
+            list = [item if item!='.' else None for item in line.strip().split('\t')]
             if list[0]!=ID:
                 ID = list[0]
                 self.entries.append(Cns_entry(ID))
@@ -396,6 +396,7 @@ class Maf(Serial_Filetype):
                     cns_type = "intergenic"
 
                 cns_entry.add_seq(genome,cns_type,dist,loc_chrom,closest_gene,start,stop,gene_start,gene_stop,sequence_text)
+        cns.entries = [entry for entry in cns.entries if len(entry.sequences)>1]
         return cns
 
     @staticmethod

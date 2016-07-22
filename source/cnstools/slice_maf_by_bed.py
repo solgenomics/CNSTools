@@ -1,6 +1,18 @@
 from _filetypes import Bed6, Maf
 import sys
 
+def parser(parser_add_func,name):
+    p = parser_add_func(name,description="Takes a maf file and a bed file which has index tags which identify which maf sequence it falls inside of and returns a maf file containing only the ranges specified in the bed file. To convert a untagged bed file to an appropriate format for this program, the maf can be converted to a bed file using maf_to_bed  and then intersected (using bedtools) with the bed file of your choosing.")
+    p.add_argument("maf_file", help="Path to maf file.")
+    p.add_argument("bed_file", help="Path to bed file.")
+    p.add_argument("ref_genome", help="Genome in maf file to base slicing locations on.")
+    p.add_argument("index_tag", help="Index tag in the bed file which contains the index of the maf region the original bed entry was created from.")
+    p.add_argument("-o", "--out_file", default=None, help="Path to output (maf file). If not provided, program outputs to stdout.")
+    p.add_argument("-n", "--max_N_ratio", default=0.5,type=float, help="Maximum ratio (0-1) of unidentified nucleotides in a sliced sequence for it to be returned.")
+    p.add_argument("-g", "--max_gap_ratio", default=0.5,type=float, help="Maximum ratio (0-1) of gaps in a sliced sequence for it to be returned.")
+    p.add_argument("-l", "--min_len", default=0.5,type=int, help="Minimum length of a sequence for it to be returned.")
+    return p
+
 def run(maf_file,bed_file,ref_genome,index_tag,out_file=None,max_N_ratio=0.5,max_gap_ratio=0.5,min_len=15):
     """Takes a maf file and a bed file which has index tags which identify which maf sequence it falls inside
     of and returns a maf file containing only the ranges specified in the bed file. To convert a untagged bed

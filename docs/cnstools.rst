@@ -12,13 +12,12 @@ Submodules
 .. toctree::
 
    cnstools.analyze_cns
-   cnstools.bed_maf_parse
-   cnstools.blast_to_bed
-   cnstools.cns_to_fasta
+   cnstools.chrom_cns_identify
+   cnstools.combine_cns
+   cnstools.create_genome_beds
+   cnstools.full_cns_identify
    cnstools.gff3_to_bed
-   cnstools.identify
    cnstools.maf_to_bed
-   cnstools.maf_to_fasta
-   cnstools.parse_cns_data
    cnstools.setup
+   cnstools.slice_maf_by_bed
 

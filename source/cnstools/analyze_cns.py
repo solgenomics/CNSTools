@@ -12,7 +12,7 @@ from matplotlib import cm
 import matplotlib.colors as colors
 
 
-def main(cns,task_list):
+def _main(cns,task_list):
     """This function runs the main workflow for the script.
 
     :param cns: The :class:`.Cns` object to be used in the program.
@@ -25,7 +25,7 @@ def main(cns,task_list):
 
     if "type_conditional_probs" in task_list:
         list_of_cns_types = ["intergenic","intronic","downstream","upstream"]
-        numGenoms = 2
+        numGenoms = 7
 
         type_list=list_of_cns_types+["unknown","DNE"]
         # list_of_cns_types = type_list
@@ -36,11 +36,10 @@ def main(cns,task_list):
             entry_count_dict = {}
             entry_pair_counts = {}
             for seq in entry.get_seqs():
-                if (seq.genome=="Metru" or seq.genome=="Glmax"):
-                    t = seq.type if seq.type!=None else "unknown"
-                    if t not in entry_count_dict: 
-                        entry_count_dict[t] = 0
-                    entry_count_dict[t]+=1
+                t = seq.type if seq.type!=None else "unknown"
+                if t not in entry_count_dict: 
+                    entry_count_dict[t] = 0
+                entry_count_dict[t]+=1
             entry_count_dict["DNE"] = numGenoms - sum((entry_count_dict[key] for key in entry_count_dict))
             entry_types = entry_count_dict.keys()
             for i in range(len(entry_types)):
@@ -81,15 +80,15 @@ def main(cns,task_list):
         typeLens = {}
         for entry in cns.entries:
             for seq in entry.get_seqs():
-                if seq.dist!=None:
-                    if seq.dist!=0:
+                if seq.stop and seq.start:
+                    if seq.dist and abs(seq.dist)>0:
                         lens.append(seq.stop-seq.start)
                         dists.append(seq.dist)
                     if seq.type not in typeLens: typeLens[seq.type] = []
                     typeLens[seq.type].append(seq.stop-seq.start)
 
-        _heatmap_histogram((dists,lens),"dist_len_heatmap.svg")
-        _histogram(typeLens,"type_len_histogram.svg")
+        _heatmap_histogram((dists,lens),"dist_len_heatmap.svg",xName="Downstream distance of CNS from nearest gene (bp)",yName="Length of CNS (bp)",plt_title="Distribution of CNS by Length and Distance")
+        _histogram(typeLens,"type_len_histogram.svg",title="CNS Length Histogram",xName="CNS length (bp)")
 
     if "nucleotide_freq" in task_list:
         nucs = ('A','T','C','G')
@@ -107,20 +106,32 @@ def main(cns,task_list):
                 typefreqs[t][nuc] = typefreqs[t][nuc]/float(typefreqs[t]['__denom'])
             del typefreqs[t]['__denom']
         _multi_bar_graph(typefreqs,"nucleotide_freq_graph.svg")
+    if "types" in task_list:
+        type_count_dict = {}
+        for entry in cns.entries:
+            for seq in entry.get_seqs():
+                if seq.type not in type_count_dict:
+                    type_count_dict[seq.type] = 0
+                type_count_dict[seq.type]+=1
+        _bar_graph(type_count_dict,"type_bar_graph.svg",title="CNS Type Count",xName="CNS type")
 
-def _heatmap_histogram(data,out_file_path):
+
+def _heatmap_histogram(data,out_file_path,xName="",yName="",plt_title=""):
     plt.clf()
-    plt.xlabel('')
-    plt.ylabel('')
-    plt.hexbin(data[0], data[1], cmap=plt.cm.jet, norm=mpl.colors.LogNorm())
+    ax = plt.gca()
+    ax.set_title(plt_title,fontsize=14, y=1.1)
+    ax.set_xlabel(xName)
+    ax.set_ylabel(yName)
+    im = ax.hexbin(data[0], data[1], cmap=plt.cm.jet, norm=mpl.colors.LogNorm())
+    plt.colorbar(im)
     plt.savefig(out_file_path, bbox_inches='tight')
 
 def _heatmap(data,out_file_path,xName="",yName="",xlabels=None,ylabels=None,plt_title=""):
     plt.clf()
     biggest = max((val for row in data for val in row))
     ax = plt.gca()
-    im = ax.imshow(data, extent=[0,len(data),0,len(data[0])], aspect=1.0, interpolation='nearest', vmin=0,vmax=biggest)
-    ax.set_title(plt_title,fontsize=14, y=1.1)
+    im = ax.imshow(data, extent=[0,len(data),0,len(data[0])], cmap=plt.cm.jet,aspect=1.0, interpolation='nearest', vmin=0,vmax=biggest)
+    ax.set_title(plt_title,fontsize=14, y=1.2)
     ax.set_xlabel(xName)
     ax.set_ylabel(yName)
     plt.colorbar(im)
@@ -136,24 +147,32 @@ def _heatmap(data,out_file_path,xName="",yName="",xlabels=None,ylabels=None,plt_
         for j in range(len(data[i])):
             ax.annotate(('%s'%(data[i][j]))[:5], xy = (j+0.5, (len(data[i])-i)-0.5),
                 ha = 'center', va = 'center')
-                #bbox = dict(boxstyle = 'square,pad=0.5', fc = 'white', alpha = 0.3))
     plt.savefig(out_file_path, bbox_inches='tight')
 
-def _histogram(data_dict,out_file_path):
+def _histogram(data_dict,out_file_path,title="",xName="",yName="Count"):
     plt.clf()
     plt.hold(True)
-    all_min = min((min(data_dict[key]) for key in data_dict))
-    all_max = max((max(data_dict[key]) for key in data_dict))
-    bins = np.linspace(all_min, all_max, 50)
-    for key in data_dict:
-        plt.hist(data_dict[key], bins, alpha=0.3, label=key,log=True)
-    plt.legend(loc='upper right')
+    n_bins = 20 
+    ax = plt.gca()
+    data = zip(*[[key,data_dict[key]] for key in data_dict])
+    labels = data[0]
+    list_list = data[1]
+    ax.hist(list_list, n_bins, histtype='bar' ,label=labels,rwidth=0.9,log=True)
+    ax.legend(prop={'size': 10})
+    ax.set_title(title)
+    ax.set_xlabel(xName)
+    ax.set_ylabel(yName)
     plt.savefig(out_file_path, bbox_inches='tight')
 
-def _bar_graph(dict,out_file_path):
+def _bar_graph(dict,out_file_path,title="",xName="",yName="Count"):
     plt.clf()
-    plt.bar(range(len(dict)), dict.values(), align='center')
-    plt.xticks(range(len(dict)), dict.keys())
+    ax = plt.gca()
+    ax.bar(range(len(dict)), dict.values(), align='center')
+    ax.set_xticks(range(len(dict)))
+    ax.set_xticklabels(dict.keys())
+    ax.set_title(title)
+    ax.set_xlabel(xName)
+    ax.set_ylabel(yName)
     plt.savefig(out_file_path, bbox_inches='tight')
 
 def _multi_bar_graph(dict_dict,out_file_path):
@@ -165,7 +184,7 @@ def _multi_bar_graph(dict_dict,out_file_path):
     for i in range(len(keys)):
         dict = dict_dict[keys[i]]
         vals = np.array(dict.values())
-        stdev = sp.stats.sem(vals)
+        stdev = np.std(vals)
         plt.bar(group_pos+(i*bar_width), vals, bar_width, label=keys[i])
         plt.errorbar(group_pos+((i+0.5)*bar_width), vals, yerr=stdev, fmt='o',capsize=5,capthick=1,elinewidth=1,markersize=0,color='black')
     plt.xticks(group_pos+(len(keys)/2)*bar_width, dict_dict[keys[0]].keys())
@@ -186,5 +205,5 @@ def run(cns_file,*tasks):
     with open(cns_file) as file:
         cns.add_lines(file.readlines())
 
-    main(cns,task_list)
+    _main(cns,task_list)
 

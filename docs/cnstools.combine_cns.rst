@@ -1,7 +1,7 @@
-cnstools.gff2_to_bed module
+cnstools.combine_cns module
 ===========================
 
-.. automodule:: cnstools.gff2_to_bed
+.. automodule:: cnstools.combine_cns
     :members:
     :undoc-members:
     :show-inheritance:

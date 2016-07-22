@@ -3,11 +3,14 @@ import sys
 from _utils import Progress_tracker
 
 import argparse
-parser = argparse.ArgumentParser("gff3_to_bed")
-parser.add_argument("gff3_file", help="Path to gff3 file.")
-parser.add_argument("-o", "--bed_out", default=None, help="Path to output. (bed file)")
-parser.add_argument("-t", "--type_list", nargs='*', default=[], help="Specifies that only sequences of these types should be added to the bed.")
-parser.add_argument("-p", "--sequence_prefix", nargs='*', default=[], help="Appends provided string to the front of the chromosome names in the bed file.")
+
+def parser(parser_add_func,name):
+    p = parser_add_func(name,description="Converts a gff3 file into a bed file. If no output path is provided, outputs to stdout.")
+    p.add_argument("gff3_file", help="Path to gff3 file.")
+    p.add_argument("-o", "--bed_out", default=None, help="Path to output. (bed file)")
+    p.add_argument("-t", "--type_list", nargs='*', default=[], help="Specifies that only sequences of these types should be added to the bed.")
+    p.add_argument("-p", "--sequence_prefix", nargs='*', default=[], help="Appends provided string to the front of the chromosome names in the bed file.")
+    return p
 
 def run(gff3_file,bed_out=None,type_list=[],sequence_prefix=None):
     """Converts a gff3 file into a bed file. If no output path is provided, outputs to stdout.

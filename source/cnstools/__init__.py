@@ -12,6 +12,10 @@ names = [
     "maf_to_bed",
     "slice_maf_by_bed",
     "combine_cns",
+    "wiggle_to_bed",
+    "doc_testing",
+    "cns_to_fasta",
+    "cns_to_bed"
 ]
 __all__ = names
 for name in names:

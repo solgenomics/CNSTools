@@ -1,11 +1,13 @@
 import json
-from _filetypes import Cns
+from filetype_classes import Cns
 from _utils import create_path, JSON_saver, safe_print, header_print, Progress_tracker
 import argparse
 
 def _main(data,output_folder,overwrite=False):
     datasaver = JSON_saver(create_path(output_folder,"record","json",overwrite=overwrite))
     datasaver.save(data)
+
+    header_print("Combining %s CNS files"%len(data['ref_aligned_chroms']))
 
     data["combined_cns"] = create_path(output_folder,"combined_identified","cns",overwrite=overwrite)
     print len(data['ref_aligned_chroms'])

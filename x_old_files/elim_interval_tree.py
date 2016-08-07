@@ -13,11 +13,11 @@ class Interval_tree():
     def __init__(self):
         self.root = None
         self.list = None
-        self.startList = None
-        self.stopList = None
         pass
-    def build_from_list(self,list,start,end,parent=None):
+    def build_from_list(self,list,start=0,end=None,parent=None):
         this_node = Node()
+        if end==None:
+            end = len(list)-1
         if parent==None:
             self.list = list
             self.root = this_node

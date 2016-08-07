@@ -1,4 +1,4 @@
-from _filetypes import Maf, Bed6
+from filetype_classes import Maf, Bed6
 import sys
 
 import argparse

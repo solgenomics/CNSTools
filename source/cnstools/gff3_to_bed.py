@@ -1,4 +1,4 @@
-from _filetypes import Gff3, Bed6 
+from filetype_classes import Gff3, Bed6 
 import sys
 from _utils import Progress_tracker
 

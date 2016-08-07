@@ -17,11 +17,13 @@ def main():
 
     args = main_parser.parse_args(sys.argv[1:])
 
-    _utils.header_print("Running %s..."%args.program)
+    _utils.header_print("Running %s..."%args.program,h_type=3)
 
     program_to_run = args.program
     del args.program
-    program_run_dict[program_to_run](**vars(args))
+    arg_dict = vars(args)
+    arg_dict_to_pass = {key:arg_dict[key] for key in arg_dict if key!="program" and arg_dict[key]!=None}
+    program_run_dict[program_to_run](**arg_dict_to_pass)
 
 if __name__ == '__main__':
     main()

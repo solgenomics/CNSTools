@@ -1,7 +1,7 @@
 import json
 import os
 from copy import deepcopy
-from _filetypes import Maf, Gff3, Bed6, Bed13
+from filetype_classes import Maf, Gff3, Bed6, Bed13
 from _utils import create_path, JSON_saver, safe_print, header_print, Progress_tracker
 import argparse
 import subprocess
@@ -9,12 +9,14 @@ import subprocess
 from maf_to_bed import run as maf_to_bed
 from gff3_to_bed import run as gff3_to_bed
 from slice_maf_by_bed import run as slice_maf_by_bed
+from wiggle_to_bed import run as wiggle_to_bed
 
 # json_file_format = {
 #     "chrom_seq_maf":"PATH",
 #     "chrom_conserved_bed":"PATH",
 #     "ref_genome":"PREFIX",
 #     "ref_coding_bed":"PATH",
+#     "chrom_conservation_wig":"PATH",
 #     "genomes":{
 #         "PREFIX":{
 #             "annot_gff3":"PATH",
@@ -54,9 +56,29 @@ def _main(data,output_folder,num_threads,overwrite=False,chrom_name=None):
     #$bedtools subtract
     info = "Subtract coding regions from conserved aligned regions:"
     header_print(info)
-    data['cns_bed'] = create_path(output_folder,"cns","bed",overwrite=overwrite)
-    cmd = "bedtools subtract -a %s -b %s > %s" % (data['conserved_bed'],data['ref_coding_bed'],data['cns_bed'])
+    data['potential_cns_bed'] = create_path(output_folder,"potential_cns","bed",overwrite=overwrite)
+    cmd = "bedtools subtract -a %s -b %s > %s" % (data['conserved_bed'],data['ref_coding_bed'],data['potential_cns_bed'])
     tracker = Progress_tracker("Running bedtools subtract",1).estimate(False).display()
+    process = subprocess.Popen(cmd, shell=True)
+    process.wait()
+    tracker.done()
+    datasaver.save(data)
+
+    #wiggle_to_bed
+    info = "Converting especially conserved regions in wiggle file to bed"
+    header_print(info)
+    data['best_conserved_bed'] = create_path(output_folder,"best_conserved","bed",overwrite=overwrite)
+    wiggle_to_bed(wig_file=data['chrom_conservation_wig'],
+                  out_file=data['best_conserved_bed'],
+                  genome_name=data['ref_genome'])
+    datasaver.save(data)
+
+    #filter_bed_with_wiggle
+    info = "Intersecting wiggle bed with the potential cns bed"
+    header_print(info)
+    data['cns_bed'] = create_path(output_folder,"cns","bed",overwrite=overwrite)
+    cmd = "bedtools intersect -a %s -b %s > %s" % (data['potential_cns_bed'],data['best_conserved_bed'],data['cns_bed'])
+    tracker = Progress_tracker("Running bedtools intersect",1).estimate(False).display()
     process = subprocess.Popen(cmd, shell=True)
     process.wait()
     tracker.done()

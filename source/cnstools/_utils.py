@@ -3,6 +3,7 @@ import sys
 import os
 import threading
 import json
+import inspect
 
 def safe_print(content,print_id=None):
     sys.stdout.flush()
@@ -14,9 +15,30 @@ def safe_print(content,print_id=None):
     sys.stderr.write(str(content)+"\n")
     sys.stdout.flush()
 
-def header_print(header):
+def header_print(header,h_type=0):
     wall = lambda char: char*70
-    safe_print("\n%s\n %s \n%s" % (wall("="),header,wall("~")))
+    if h_type==0:
+        safe_print("\n%s\n %s \n%s" % (wall(" "),header,wall("~")))
+    if h_type==1:
+        safe_print("\n%s\n %s \n%s" % (wall("~"),header,wall("~")))
+    if h_type==2:
+        safe_print("\n%s\n %s \n%s" % (wall("="),header,wall("~")))
+    if h_type==3:
+        safe_print("\n%s\n %s \n%s" % (wall("="),header,wall("=")))
+
+def get_docstring_info(function,param=None):
+    ds = inspect.getdoc(function)
+    if param!=None:
+        ds_dl = ds.split(":returns")[0]
+        list = ds_dl.split(":param")[1:]
+        for section in list:
+            info,doc = section.split(":")
+            info = info.split(" ")
+            if info[-1]==param:
+                return doc.strip()
+        return None
+    return ds.split("\n\n")[0].strip()
+
 
 def create_path(path,name=None,extension=None,overwrite=True):
     try:
@@ -38,6 +60,13 @@ def create_path(path,name=None,extension=None,overwrite=True):
         raise ValueError("You provided an existing path but asked not to overwrite!")
 
     return path
+
+def reduce_gaps(seqlist):
+    lists = [list(seq) for seq in seqlist]
+    for i in range(len(lists[0])-1,-1,-1):
+        if all(seq[i]=="-" for seq in lists):
+            for seq in lists: del seq[i]
+    return ["".join(seq) for seq in lists]
 
 class JSON_saver(object):
     """docstring for JSON_saver"""

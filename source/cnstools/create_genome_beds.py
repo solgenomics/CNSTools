@@ -1,5 +1,5 @@
 import json
-from _filetypes import Gff3, Bed6
+from filetype_classes import Gff3, Bed6
 from _utils import create_path, JSON_saver, safe_print, header_print, Progress_tracker
 import argparse
 

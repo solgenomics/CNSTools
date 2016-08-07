@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # CNStools documentation build configuration file, created by
-# sphinx-quickstart on Fri Jul 22 12:19:31 2016.
+# sphinx-quickstart on Sun Aug  7 19:01:07 2016.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.

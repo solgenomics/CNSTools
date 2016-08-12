@@ -143,11 +143,11 @@ def _heatmap_histogram(data,out_file_path,xName="",yName="",plt_title=""):
     plt.colorbar(im)
     plt.savefig(out_file_path, bbox_inches='tight')
 
-def _heatmap(data,out_file_path,xName="",yName="",xlabels=None,ylabels=None,plt_title=""):
+def _heatmap(data,out_file_path,xName="",yName="",xlabels=None,ylabels=None,plt_title="",aspect=1.0):
     plt.clf()
     biggest = max((val for row in data for val in row))
     ax = plt.gca()
-    im = ax.imshow(data, extent=[0,len(data),0,len(data[0])], cmap=plt.cm.jet,aspect=1.0, interpolation='nearest', vmin=0,vmax=biggest)
+    im = ax.imshow(data, extent=[0,len(data),0,len(data[0])], cmap=plt.cm.jet,aspect=aspect, interpolation='nearest', vmin=0,vmax=biggest)
     ax.set_title(plt_title,fontsize=14, y=1.2)
     ax.set_xlabel(xName)
     ax.set_ylabel(yName)

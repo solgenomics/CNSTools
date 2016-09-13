@@ -49,14 +49,14 @@ def _main(data,output_folder,overwrite=False):
 
 def parser(parser_add_func,name):
     p = parser_add_func(name)
-    p.add_argument("parameter_file", help="Path to the parameter file.")
+    p.add_argument("config_file", help="Path to the configuration file.")
     p.add_argument("-o", "--output_folder", default="./cnstools_out/", help="Path to output folder.")
     p.add_argument("-f", "--overwrite", action='store_true', help="If present, the program overwrites data in the output folder.")
     return p
 
-def run(parameter_file,output_folder,overwrite=False):
+def run(config_file,output_folder,overwrite=False):
     config = None
-    with open(parameter_file) as intructionJSON:
+    with open(config_file) as intructionJSON:
         config = json.load(intructionJSON)
     output_folder = create_path(output_folder,overwrite=overwrite)
     _main(config,output_folder,num_threads,overwrite)

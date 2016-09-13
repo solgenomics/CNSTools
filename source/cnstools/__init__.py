@@ -19,4 +19,4 @@ names = [
 ]
 __all__ = names
 for name in names:
-    exec "import %s"%(name)
+    __import__(name)

@@ -7,9 +7,9 @@ from file_handler import Fasta_handler
 from _utils import Progress_tracker
 
 config = {
-    "ref_genome":"/home/dal333/alignment_step/test_input/mtruncatula_285_mt4.0_masked.fa",
-    "query_genomes":["/home/dal333/alignment_step/test_input/Luang.fa"],
-    "out_folder":"/home/dal333/alignment_step/test_input/sliced",
+    "ref_genome":"/home/dal333/haudrey_test_data/TAIR10_chr_all.fas",
+    "query_genomes":["/home/dal333/haudrey_test_data/crubella_183_v1.fa","/home/dal333/haudrey_test_data/Alyrata_107_v1.fa"],
+    "out_folder":"/home/dal333/haudrey_test_data/alignment",
 
     #optional:
     "num_processes":9,
@@ -28,8 +28,8 @@ def parser(parser_add_func,name):
 
 def run(config_path):
 
-    # with open(config_path) as config_file:
-    #   config = json.loads(config_file)
+    with open(config_path) as config_file:
+      config = json.loads(config_file)
 
     lastz_path = config["lastz_path"]
     chaining_script_directory = config["chaining_script_directory"]

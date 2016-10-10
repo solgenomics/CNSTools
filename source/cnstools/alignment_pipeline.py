@@ -29,7 +29,7 @@ def parser(parser_add_func,name):
 def run(config_path):
 
     with open(config_path) as config_file:
-      config = json.loads(config_file)
+      config = json.loads(config_file.read())
 
     lastz_path = config["lastz_path"]
     chaining_script_directory = config["chaining_script_directory"]

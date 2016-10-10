@@ -15,7 +15,8 @@ names = [
     "wiggle_to_bed",
     "cns_to_fasta",
     "cns_to_bed",
-    "cns_type_motif_graph"
+    "cns_type_motif_graph",
+    "alignment_pipeline"
 ]
 __all__ = names
 for name in names:

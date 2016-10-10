@@ -179,6 +179,6 @@ class Progress_tracker():
         if not status_message: 
             status_message=None
         self.status_message = status_message
-        self.display(estimate=self.estimate_on)
+        self.display()
         return self
 

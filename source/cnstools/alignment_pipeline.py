@@ -6,18 +6,16 @@ import time
 from file_handler import Fasta_handler
 from _utils import Progress_tracker
 
-config = {
-    "ref_genome":"/home/dal333/haudrey_test_data/TAIR10_chr_all.fas",
-    "query_genomes":["/home/dal333/haudrey_test_data/crubella_183_v1.fa","/home/dal333/haudrey_test_data/Alyrata_107_v1.fa"],
-    "out_folder":"/home/dal333/haudrey_test_data/alignment",
-
+config_defaults = {
+    #"ref_genome":"/home/dal333/haudrey_test_data/TAIR10_chr_all.fas",
+    #"query_genomes":["/home/dal333/haudrey_test_data/crubella_183_v1.fa","/home/dal333/haudrey_test_data/Alyrata_107_v1.fa"],
+    #"out_folder":"/home/dal333/haudrey_test_data/alignment",
+    #"chaining_script_directory":"/home/dal333/alignment_step/scripts/",
     #optional:
-    "num_processes":9,
-    "lastz_options":"C=0 E=30 H=2000 K=2200 L=6000 M=50 O=400 T=2 Y=3400 Q=/home/dal333/alignment_step/test_input/HoxD55.q",
+    "num_processes":1,
+    "lastz_options":"C=0 E=30 H=2000 K=2200 L=6000 M=50 O=400 T=2 Y=3400"#Q=/home/dal333/alignment_step/test_input/HoxD55.q",
     "chainNet_options":"-minSpace=25",
-
     "lastz_path":"lastz",
-    "chaining_script_directory":"/home/dal333/alignment_step/scripts/",
     "alt_shell_path":None,
 }
 
@@ -30,6 +28,8 @@ def run(config_path):
 
     with open(config_path) as config_file:
       config = json.loads(config_file.read())
+    for key in config_defaults:
+        config.setdefault(key, config_defaults[key])
 
     lastz_path = config["lastz_path"]
     chaining_script_directory = config["chaining_script_directory"]

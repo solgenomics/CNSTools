@@ -13,7 +13,7 @@ config_defaults = {
     #"chaining_script_directory":"/home/dal333/alignment_step/scripts/",
     #optional:
     "num_processes":1,
-    "lastz_options":"C=0 E=30 H=2000 K=2200 L=6000 M=50 O=400 T=2 Y=3400"#Q=/home/dal333/alignment_step/test_input/HoxD55.q",
+    "lastz_options":"C=0 E=30 H=2000 K=2200 L=6000 M=50 O=400 T=2 Y=3400",#Q=/home/dal333/alignment_step/test_input/HoxD55.q",
     "chainNet_options":"-minSpace=25",
     "lastz_path":"lastz",
     "alt_shell_path":None,

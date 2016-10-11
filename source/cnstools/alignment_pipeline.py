@@ -161,6 +161,3 @@ def call_commands_async(command_iterable,num,shell=False,tracker_name="Running c
     if tracker: tracker.status().done()
     return finished
 call_commands_async.alt_shell_path=None
-
-if __name__ == '__main__':
-    run("")

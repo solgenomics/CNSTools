@@ -1,5 +1,7 @@
-import __init__ as cnstools
 import sys
+if sys.version_info < (2,7) or not sys.version_info < (2,8):
+    sys.exit('cnstools requires python 2.7')
+import __init__ as cnstools
 import _utils
 import argparse
 

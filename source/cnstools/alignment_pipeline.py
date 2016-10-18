@@ -138,6 +138,7 @@ def call_commands_async(command_iterable,num,shell=False,tracker_name="Running c
     except:
         tracker = None
     for command in command_iterable:
+        print command
         if shell==True:
             if call_commands_async.alt_shell_path!=None:
                 process_list.append(subprocess.Popen(" ".join(command),shell=True,executable=call_commands_async.alt_shell_path))

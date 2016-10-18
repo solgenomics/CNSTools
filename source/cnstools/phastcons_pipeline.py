@@ -32,6 +32,7 @@ def run(config_path):
     roast_path = config["roast_path"]
     msa_view_path = config["msa_view_path"]
     num_processes = config["num_processes"]
+    out_folder = config["out_folder"]
 
     per_chrom_labeled_mafs = {}
     for genome in per_genome_input_mafs:

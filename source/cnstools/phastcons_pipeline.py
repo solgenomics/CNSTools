@@ -51,7 +51,7 @@ def run(config_path):
             os.rename(old_name,new_name)
         per_chrom_labeled_mafs[chrom] = new_names
         outfile = os.path.join(out_folder,chrom+".roast.maf")
-        roast_commandlists.append([roast_path,"E="+chrom,"X=0", tree, chrom+".*.prefixed.maf", outfile])
+        roast_commandlists.append([roast_path,'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",reference)), chrom+".*.prefixed.maf", outfile])
     roast_files = [l[-1] for l in roast_commandlists]
     call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast") #runs commands asynchronously with maximum simultanious process count
 

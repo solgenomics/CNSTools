@@ -46,7 +46,7 @@ def run(config_path):
     roast_commandlists = []
     for chrom in per_chrom_labeled_mafs:
         folder = os.path.dirname(per_chrom_labeled_mafs[chrom][0])
-        new_names = [os.path.join(out_folder,".".join(chrom,os.path.basename(maf_name))) for maf_name in per_chrom_labeled_mafs[chrom]]
+        new_names = [os.path.join(out_folder,".".join([chrom,os.path.basename(maf_name)])) for maf_name in per_chrom_labeled_mafs[chrom]]
         for old_name,new_name in zip(per_chrom_labeled_mafs[chrom],new_names):
             os.rename(old_name,new_name)
         per_chrom_labeled_mafs[chrom] = new_names

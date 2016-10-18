@@ -101,5 +101,3 @@ def remove_target_chrom_and_count(maf_name,out_maf,ref_name):
                 line = " ".join(line_arr)+"\n"
             out.write(line)
     return a_count
-
-run()

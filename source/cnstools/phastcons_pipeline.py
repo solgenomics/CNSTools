@@ -2,19 +2,41 @@ import os
 import json
 from alignment_pipeline import call_commands_async
 
-def run():
-    per_genome_input_mafs = {"name":["filename"]}
-    per_genome_input_gffs = {"name":["filename"]}
-    roast_path = "/home/dal333/alignment_step/multiz-tba.012109/x86_64/bin/roast"
-    reference = "Metru"
-    msa_view_path = "msa_view"
-    tree = ""
-    num_processes = 9
+config_defaults = {
+    #"per_genome_input_mafs": {"name":["chr_path","chr_path]},
+    #"ref_genome_gff3": "path",
+    #"reference": "Metru",
+    #"tree": "",
+    "out_folder":".",
+    "roast_path": "roast",
+    "msa_view_path": "msa_view",
+    "num_processes": 1,
+}
+
+def parser(parser_add_func,name):
+    p = parser_add_func(name,description="Aligns a genome to a reference")
+    p.add_argument("config_path", help="Absolute(!) path to config file")
+    return p
+
+def run(config_path):
+
+    with open(config_path) as config_file:
+      config = json.loads(config_file.read())
+    for key in config_defaults:
+        config.setdefault(key, config_defaults[key])
+
+    per_genome_input_mafs = config["per_genome_input_mafs"]
+    ref_genome_gff3 = config["ref_genome_gff3"]
+    reference = config["reference"]
+    tree = config["tree"]
+    roast_path = config["roast_path"]
+    msa_view_path = config["msa_view_path"]
+    num_processes = config["num_processes"]
 
     per_chrom_labeled_mafs = {}
     for genome in per_genome_input_mafs:
         for maf_name in per_genome_input_mafs[genome]:
-            out_name = os.path.join(out,os.path.splitext(os.path.basename(maf_name))[0]+".prefixed.maf")
+            out_name = os.path.join(out_folder,os.path.splitext(os.path.basename(maf_name))[0]+".prefixed.maf")
             chrom, num_entries = prefix_and_get_chrom_and_count(maf_name,out_name,[reference,genome])
             if num_entries>0: #We dont need to do anything with the empty files!
                 if chrom not in per_chrom_labeled_mafs: per_chrom_labeled_mafs[chrom] = []
@@ -23,11 +45,12 @@ def run():
     roast_commandlists = []
     for chrom in per_chrom_labeled_mafs:
         folder = os.path.dirname(per_chrom_labeled_mafs[chrom][0])
-        new_names = [os.path.join(out,".".join(chrom,os.path.basename(maf_name))) for maf_name in per_chrom_labeled_mafs[chrom]]
+        new_names = [os.path.join(out_folder,".".join(chrom,os.path.basename(maf_name))) for maf_name in per_chrom_labeled_mafs[chrom]]
         for old_name,new_name in zip(per_chrom_labeled_mafs[chrom],new_names):
             os.rename(old_name,new_name)
         per_chrom_labeled_mafs[chrom] = new_names
-        roast_commandlists.append([roast_path,"E="+chrom,"X=0", tree, chrom+".*.prefixed.maf", os.path.join(out,chrom+".roast.maf")])
+        outfile = os.path.join(out_folder,chrom+".roast.maf")
+        roast_commandlists.append([roast_path,"E="+chrom,"X=0", tree, chrom+".*.prefixed.maf", outfile])
     roast_files = [l[-1] for l in roast_commandlists]
     call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast") #runs commands asynchronously with maximum simultanious process count
 
@@ -39,10 +62,9 @@ def run():
             prepared_for_msa.append(out_name)
 
     mas_commandlists = []
-    for file in prepared_for_msa:
-        genome = "???"
-
-    "msa_view","--in-format","MAF","--4d","$file3","--features","$outdir/$ref.gff",">","$outdir/$ref.4d-codons.ss"
+    for maf_name in prepared_for_msa:
+        out_name = os.path.splitext(maf_name)+".4d-codons.ss"
+        mas_commandlists.append(["msa_view","--in-format","MAF","--4d",maf_name,"--features",ref_genome_gff3,">",out_name])
     call_commands_async(mas_commandlists,num_processes,shell=True,tracker_name="msa")
 
 

@@ -71,7 +71,7 @@ def run(config_path):
     prepared_for_msa = []
     for maf_name in roast_files:
         out_name = os.path.splitext(maf_name)[0]+".qchrom.maf"
-        num_entries,chrom,non_ref_genome = remove_target_chrom_and_count(maf_name,out_name,reference)
+        num_entries = remove_target_chrom_and_count(maf_name,out_name,reference)
         if num_entries > 0:
             prepared_for_msa.append(out_name)
     mas_commandlists = []

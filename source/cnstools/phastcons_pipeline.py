@@ -26,7 +26,7 @@ def run(config_path):
         config.setdefault(key, config_defaults[key])
 
     #grab vars from config and make sure the paths are absolute
-    os.chdir(os.path.dirname(config_path))
+    os.chdir(os.path.dirname(os.path.abspath(config_path)))
 
     per_genome_input_mafs = config["per_genome_input_mafs"]
     for genome in per_genome_input_mafs:

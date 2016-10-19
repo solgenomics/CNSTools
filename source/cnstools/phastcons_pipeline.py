@@ -54,7 +54,7 @@ def run(config_path):
     roast_commandlists = []
     for chrom in per_chrom_labeled_mafs:
         outfile = os.path.join(out_folder,chrom+".roast.maf")
-        roast_commandlists.append(["roast",'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",chrom)), chrom+".*.sing.maf", outfile])
+        roast_commandlists.append(["roast",'E="%s"'%reference,"X=0", '"%s"'tree, chrom+".*.sing.maf", outfile])
     roast_files = [l[-1] for l in roast_commandlists]
     call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast",env=cmd_env) #runs commands asynchronously with maximum simultanious process count
 
@@ -83,7 +83,7 @@ def prefix_and_get_chrom_and_count(maf_name,out_maf,names):
             if line.startswith("s"):
                 line_arr = line.split()
                 if s_count==0: chrom = line_arr[1]
-                else: line_arr[1] = "%s:%s" % (names[1],line_arr[1])
+                else: line_arr[1] = "%s:%s" % (names[i],line_arr[1])
                 line = " ".join(line_arr)+"\n"
                 s_count+=1
             out.write(line)

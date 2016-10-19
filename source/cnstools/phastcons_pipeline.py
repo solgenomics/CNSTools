@@ -26,15 +26,20 @@ def run(config_path):
         config.setdefault(key, config_defaults[key])
 
     per_genome_input_mafs = config["per_genome_input_mafs"]
-    ref_genome_gff3 = config["ref_genome_gff3"]
+    for genome in per_genome_input_mafs:
+        per_genome_input_mafs[genome][:] = (os.path.realpath(p) for p in per_genome_input_mafs[genome])
+    ref_genome_gff3 = os.path.realpath(config["ref_genome_gff3"])
     reference = config["reference"]
     tree = config["tree"]
-    multiz_bin_path = config["multiz_bin_path"]
-    msa_view_bin_path = config["msa_view_bin_path"]
+    multiz_bin_path = os.path.realpath(config["multiz_bin_path"])
+    msa_view_bin_path = os.path.realpath(config["msa_view_bin_path"])
     num_processes = config["num_processes"]
-    out_folder = config["out_folder"]
+    out_folder = os.path.realpath(config["out_folder"])
 
     cmd_env = os.environ.copy()
+
+    
+    os.chdir(out_folder)
 
     if multiz_bin_path!="":
             cmd_env["PATH"] = multiz_bin_path+":" + cmd_env["PATH"]

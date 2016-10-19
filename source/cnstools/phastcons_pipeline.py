@@ -34,6 +34,11 @@ def run(config_path):
     num_processes = config["num_processes"]
     out_folder = config["out_folder"]
 
+    cmd_env = os.environ.copy()
+
+    if multiz_bin_path!="":
+            cmd_env["PATH"] = multiz_bin_path+":" + cmd_env["PATH"]
+
     per_chrom_labeled_mafs = {}
     out_name_template = os.path.join(out_folder,"{chrom}.{non_ref_genome}.sing.maf")
     for non_ref_genome in per_genome_input_mafs:
@@ -50,10 +55,8 @@ def run(config_path):
     for chrom in per_chrom_labeled_mafs:
         outfile = os.path.join(out_folder,chrom+".roast.maf")
         roast_commandlists.append(["roast",'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",chrom)), chrom+".*.sing.maf", outfile])
-        if multiz_bin_path!="":
-            roast_commandlists = ["export","PATH="+multiz_bin_path+":$PATH"+";"]+roast_commandlists
     roast_files = [l[-1] for l in roast_commandlists]
-    call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast") #runs commands asynchronously with maximum simultanious process count
+    call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast",env=cmd_env) #runs commands asynchronously with maximum simultanious process count
 
     prepared_for_msa = []
     for maf_name in roast_files:
@@ -66,7 +69,7 @@ def run(config_path):
     for maf_name in prepared_for_msa:
         out_name = os.path.splitext(maf_name)+".4d-codons.ss"
         mas_commandlists.append(["msa_view","--in-format","MAF","--4d",maf_name,"--features",ref_genome_gff3,">",out_name])
-    call_commands_async(mas_commandlists,num_processes,shell=True,tracker_name="msa")
+    call_commands_async(mas_commandlists,num_processes,shell=True,tracker_name="msa",env=cmd_env)
 
 
 def prefix_and_get_chrom_and_count(maf_name,out_maf,names):

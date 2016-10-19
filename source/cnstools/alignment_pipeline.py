@@ -130,7 +130,8 @@ def run(config_path):
         call_commands_async(axtToMaf_commands,num_processes,tracker_name="axtToMaf")
 
 
-def call_commands_async(command_iterable,num,shell=False,tracker_name="Running command"):
+def call_commands_async(command_iterable,num,shell=False,tracker_name="Running command", env=None):
+    if env = None: env = os.environ
     process_list = []
     finished = []
     try:
@@ -141,11 +142,11 @@ def call_commands_async(command_iterable,num,shell=False,tracker_name="Running c
         print command
         if shell==True:
             if call_commands_async.alt_shell_path!=None:
-                process_list.append(subprocess.Popen(" ".join(command),shell=True,executable=call_commands_async.alt_shell_path))
+                process_list.append(subprocess.Popen(" ".join(command),env=env,shell=True,executable=call_commands_async.alt_shell_path))
             else:
-                process_list.append(subprocess.Popen(" ".join(command),shell=True))
+                process_list.append(subprocess.Popen(" ".join(command),env=env,shell=True))
         elif shell==False:
-            process_list.append(subprocess.Popen(command))
+            process_list.append(subprocess.Popen(command),env=env)
         if tracker and len(process_list) >= num: tracker.status("%s/%s processes active"%(len(process_list),num))
         while len(process_list) >= num:
             pid,exitstat = os.waitpid(-1,0)

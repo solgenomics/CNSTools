@@ -37,7 +37,7 @@ def run(config_path):
     per_chrom_labeled_mafs = {}
     for genome in per_genome_input_mafs:
         for maf_name in per_genome_input_mafs[genome]:
-            out_name = os.path.join(out_folder,os.path.splitext(os.path.basename(maf_name))[0]+".prefixed.maf")
+            out_name = os.path.join(out_folder,os.path.splitext(os.path.basename(maf_name))[0]+".sing.maf")
             chrom, num_entries = prefix_and_get_chrom_and_count(maf_name,out_name,[reference,genome])
             if num_entries>0: #We dont need to do anything with the empty files!
                 if chrom not in per_chrom_labeled_mafs: per_chrom_labeled_mafs[chrom] = []
@@ -51,7 +51,7 @@ def run(config_path):
             os.rename(old_name,new_name)
         per_chrom_labeled_mafs[chrom] = new_names
         outfile = os.path.join(out_folder,chrom+".roast.maf")
-        roast_commandlists.append([roast_path,'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",reference)), chrom+".*.prefixed.maf", outfile])
+        roast_commandlists.append([roast_path,'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",reference)), chrom+".*.sing.maf", outfile])
     roast_files = [l[-1] for l in roast_commandlists]
     call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast") #runs commands asynchronously with maximum simultanious process count
 

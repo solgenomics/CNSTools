@@ -51,7 +51,7 @@ def run(config_path):
         outfile = os.path.join(out_folder,chrom+".roast.maf")
         roast_commandlists.append(["roast",'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",chrom)), chrom+".*.sing.maf", outfile])
         if multiz_bin_path!="":
-            roast_commandlists = ["export","PATH="+multiz_bin_path+":$PATH"]+roast_commandlists
+            roast_commandlists = ["export","PATH="+multiz_bin_path+":$PATH"+";"]+roast_commandlists
     roast_files = [l[-1] for l in roast_commandlists]
     call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast") #runs commands asynchronously with maximum simultanious process count
 

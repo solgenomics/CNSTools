@@ -131,7 +131,7 @@ def run(config_path):
 
 
 def call_commands_async(command_iterable,num,shell=False,tracker_name="Running command", env=None):
-    if env = None: env = os.environ
+    if env == None: env = os.environ
     process_list = []
     finished = []
     try:

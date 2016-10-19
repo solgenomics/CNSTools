@@ -25,26 +25,23 @@ def run(config_path):
     for key in config_defaults:
         config.setdefault(key, config_defaults[key])
 
-    #grab vars from config and make sure the paths are absolute
+    #grab vars from config and make sure the paths are absolute and interperted as such relative to the config file.
     os.chdir(os.path.dirname(os.path.abspath(config_path)))
+
+
+    reference =     config["reference"]
+    tree =          config["tree"]
+    num_processes = config["num_processes"]
 
     per_genome_input_mafs = config["per_genome_input_mafs"]
     for genome in per_genome_input_mafs:
         per_genome_input_mafs[genome][:] = (os.path.abspath(p) for p in per_genome_input_mafs[genome])
 
-    ref_genome_gff3 = os.path.abspath(config["ref_genome_gff3"])
-
-    reference = config["reference"]
-
-    tree = config["tree"]
-
-    multiz_bin_path = os.path.abspath(config["multiz_bin_path"])
-
+    ref_genome_gff3 =   os.path.abspath(config["ref_genome_gff3"])
+    out_folder =        os.path.abspath(config["out_folder"])
+    multiz_bin_path =   os.path.abspath(config["multiz_bin_path"])
     msa_view_bin_path = os.path.abspath(config["msa_view_bin_path"])
-
-    num_processes = config["num_processes"]
-
-    out_folder = os.path.abspath(config["out_folder"])
+    
 
     os.chdir(out_folder)
     cmd_env = os.environ.copy()
@@ -69,7 +66,7 @@ def run(config_path):
         outfile = os.path.join(out_folder,chrom+".roast.maf")
         roast_commandlists.append(["roast",'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",chrom)), chrom+".*.sing.maf", outfile])
     roast_files = [l[-1] for l in roast_commandlists]
-    call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast",env=cmd_env) #runs commands asynchronously with maximum simultanious process count
+    #call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast",env=cmd_env) #runs commands asynchronously with maximum simultanious process count
 
     prepared_for_msa = []
     for maf_name in roast_files:
@@ -77,7 +74,6 @@ def run(config_path):
         num_entries,chrom,non_ref_genome = remove_target_chrom_and_count(maf_name,out_name,reference)
         if num_entries > 0:
             prepared_for_msa.append(out_name)
-
     mas_commandlists = []
     for maf_name in prepared_for_msa:
         out_name = os.path.splitext(maf_name)+".4d-codons.ss"

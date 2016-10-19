@@ -76,7 +76,7 @@ def run(config_path):
             prepared_for_msa.append(out_name)
     mas_commandlists = []
     for maf_name in prepared_for_msa:
-        out_name = os.path.splitext(maf_name)+".4d-codons.ss"
+        out_name = os.path.splitext(maf_name)[0]+".4d-codons.ss"
         mas_commandlists.append(["msa_view","--in-format","MAF","--4d",maf_name,"--features",ref_genome_gff3,">",out_name])
     call_commands_async(mas_commandlists,num_processes,shell=True,tracker_name="msa",env=cmd_env)
 

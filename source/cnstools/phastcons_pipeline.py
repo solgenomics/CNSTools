@@ -35,10 +35,10 @@ def run(config_path):
     out_folder = config["out_folder"]
 
     per_chrom_labeled_mafs = {}
-    out_name_template = os.path.join(os.path.dirname(maf_name),"{chrom}.{non_ref_genome}.sing.maf")
+    out_name_template = os.path.join(out_folder,"{chrom}.{non_ref_genome}.sing.maf")
     for non_ref_genome in per_genome_input_mafs:
         for maf_name in per_genome_input_mafs[non_ref_genome]:
-            out_name = os.path.join(out_folder,os.path.splitext(os.path.basename(maf_name))[0]+".sing.maf")
+            out_name = os.path.join(out_folder,"temp.sing.maf")
             chrom, num_entries = prefix_and_get_chrom_and_count(maf_name,out_name,non_ref_genome)
             new_name = out_name_template.format(chrom=chrom,non_ref_genome=non_ref_genome)
             os.rename(out_name,new_name)
@@ -48,13 +48,8 @@ def run(config_path):
 
     roast_commandlists = []
     for chrom in per_chrom_labeled_mafs:
-        folder = os.path.dirname(per_chrom_labeled_mafs[chrom][0])
-        new_names = [os.path.join(out_folder,".".join([chrom,os.path.basename(maf_name)])) for maf_name in per_chrom_labeled_mafs[chrom]]
-        for old_name,new_name in zip(per_chrom_labeled_mafs[chrom],new_names):
-            os.rename(old_name,new_name)
-        per_chrom_labeled_mafs[chrom] = new_names
         outfile = os.path.join(out_folder,chrom+".roast.maf")
-        roast_commandlists.append([roast_path,'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",reference)), chrom+".*.sing.maf", outfile])
+        roast_commandlists.append([roast_path,'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",chrom)), chrom+".*.sing.maf", outfile])
     roast_files = [l[-1] for l in roast_commandlists]
     call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast") #runs commands asynchronously with maximum simultanious process count
 

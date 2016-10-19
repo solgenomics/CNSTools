@@ -25,21 +25,29 @@ def run(config_path):
     for key in config_defaults:
         config.setdefault(key, config_defaults[key])
 
+    #grab vars from config and make sure the paths are absolute
+    os.chdir(os.path.dirname(config_path))
+
     per_genome_input_mafs = config["per_genome_input_mafs"]
     for genome in per_genome_input_mafs:
-        per_genome_input_mafs[genome][:] = (os.path.realpath(p) for p in per_genome_input_mafs[genome])
-    ref_genome_gff3 = os.path.realpath(config["ref_genome_gff3"])
+        per_genome_input_mafs[genome][:] = (os.path.abspath(p) for p in per_genome_input_mafs[genome])
+
+    ref_genome_gff3 = os.path.abspath(config["ref_genome_gff3"])
+
     reference = config["reference"]
+
     tree = config["tree"]
-    multiz_bin_path = os.path.realpath(config["multiz_bin_path"])
-    msa_view_bin_path = os.path.realpath(config["msa_view_bin_path"])
+
+    multiz_bin_path = os.path.abspath(config["multiz_bin_path"])
+
+    msa_view_bin_path = os.path.abspath(config["msa_view_bin_path"])
+
     num_processes = config["num_processes"]
-    out_folder = os.path.realpath(config["out_folder"])
 
-    cmd_env = os.environ.copy()
+    out_folder = os.path.abspath(config["out_folder"])
 
-    
     os.chdir(out_folder)
+    cmd_env = os.environ.copy()
 
     if multiz_bin_path!="":
             cmd_env["PATH"] = multiz_bin_path+":" + cmd_env["PATH"]
@@ -59,7 +67,7 @@ def run(config_path):
     roast_commandlists = []
     for chrom in per_chrom_labeled_mafs:
         outfile = os.path.join(out_folder,chrom+".roast.maf")
-        roast_commandlists.append(["roast",'E="%s"'%reference,"X=0", '"%s"'%tree, chrom+".*.sing.maf", outfile])
+        roast_commandlists.append(["roast",'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",chrom)), chrom+".*.sing.maf", outfile])
     roast_files = [l[-1] for l in roast_commandlists]
     call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast",env=cmd_env) #runs commands asynchronously with maximum simultanious process count
 
@@ -88,7 +96,7 @@ def prefix_and_get_chrom_and_count(maf_name,out_maf,names):
             if line.startswith("s"):
                 line_arr = line.split()
                 if s_count==0: chrom = line_arr[1]
-                else: line_arr[1] = "%s:%s" % (names[s_count],line_arr[1])
+                else: line_arr[1] = "%s:%s" % (names[1],line_arr[1])
                 line = " ".join(line_arr)+"\n"
                 s_count+=1
             out.write(line)

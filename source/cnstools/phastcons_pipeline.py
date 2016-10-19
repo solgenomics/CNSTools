@@ -39,7 +39,7 @@ def run(config_path):
     for non_ref_genome in per_genome_input_mafs:
         for maf_name in per_genome_input_mafs[non_ref_genome]:
             out_name = os.path.join(out_folder,"temp.sing.maf")
-            chrom, num_entries = prefix_and_get_chrom_and_count(maf_name,out_name,non_ref_genome)
+            chrom, num_entries = prefix_and_get_chrom_and_count(maf_name,out_name,[reference,non_ref_genome])
             new_name = out_name_template.format(chrom=chrom,non_ref_genome=non_ref_genome)
             os.rename(out_name,new_name)
             if num_entries>0: #We dont need to do anything with the empty files!
@@ -49,7 +49,7 @@ def run(config_path):
     roast_commandlists = []
     for chrom in per_chrom_labeled_mafs:
         outfile = os.path.join(out_folder,chrom+".roast.maf")
-        roast_commandlists.append([roast_path,'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",chrom)), chrom+".*.sing.maf", outfile])
+        roast_commandlists.append([roast_path,'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",reference)), chrom+".*.sing.maf", outfile])
     roast_files = [l[-1] for l in roast_commandlists]
     call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast") #runs commands asynchronously with maximum simultanious process count
 
@@ -67,7 +67,7 @@ def run(config_path):
     call_commands_async(mas_commandlists,num_processes,shell=True,tracker_name="msa")
 
 
-def prefix_and_get_chrom_and_count(maf_name,out_maf,non_ref_genome):
+def prefix_and_get_chrom_and_count(maf_name,out_maf,names):
     with open(maf_name) as maf, open(out_maf,"w") as out:
         a_count = 0
         s_count = -1
@@ -78,7 +78,7 @@ def prefix_and_get_chrom_and_count(maf_name,out_maf,non_ref_genome):
             if line.startswith("s"):
                 line_arr = line.split()
                 if s_count==0: chrom = line_arr[1]
-                else: line_arr[1] = "%s:%s" % (non_ref_genome,line_arr[1])
+                line_arr[1] = "%s:%s" % (names[s_count],line_arr[1])
                 line = " ".join(line_arr)+"\n"
                 s_count+=1
             out.write(line)

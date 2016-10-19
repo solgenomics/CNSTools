@@ -35,13 +35,16 @@ def run(config_path):
     out_folder = config["out_folder"]
 
     per_chrom_labeled_mafs = {}
-    for genome in per_genome_input_mafs:
-        for maf_name in per_genome_input_mafs[genome]:
+    out_name_template = os.path.join(os.path.dirname(maf_name),"{chrom}.{non_ref_genome}.sing.maf")
+    for non_ref_genome in per_genome_input_mafs:
+        for maf_name in per_genome_input_mafs[non_ref_genome]:
             out_name = os.path.join(out_folder,os.path.splitext(os.path.basename(maf_name))[0]+".sing.maf")
-            chrom, num_entries = prefix_and_get_chrom_and_count(maf_name,out_name,[reference,genome])
+            chrom, num_entries = prefix_and_get_chrom_and_count(maf_name,out_name,non_ref_genome)
+            new_name = out_name_template.format(chrom=chrom,non_ref_genome=non_ref_genome)
+            os.rename(out_name,new_name)
             if num_entries>0: #We dont need to do anything with the empty files!
                 if chrom not in per_chrom_labeled_mafs: per_chrom_labeled_mafs[chrom] = []
-                per_chrom_labeled_mafs[chrom].append(out_name)
+                per_chrom_labeled_mafs[chrom].append(new_name)
 
     roast_commandlists = []
     for chrom in per_chrom_labeled_mafs:
@@ -58,7 +61,7 @@ def run(config_path):
     prepared_for_msa = []
     for maf_name in roast_files:
         out_name = os.path.splitext(maf_name)+".qchrom.maf"
-        num_entries = remove_target_chrom_and_count(maf_name,out_name,reference)
+        num_entries,chrom,non_ref_genome = remove_target_chrom_and_count(maf_name,out_name,reference)
         if num_entries > 0:
             prepared_for_msa.append(out_name)
 
@@ -69,7 +72,7 @@ def run(config_path):
     call_commands_async(mas_commandlists,num_processes,shell=True,tracker_name="msa")
 
 
-def prefix_and_get_chrom_and_count(maf_name,out_maf,names):
+def prefix_and_get_chrom_and_count(maf_name,out_maf,non_ref_genome):
     with open(maf_name) as maf, open(out_maf,"w") as out:
         a_count = 0
         s_count = -1
@@ -77,10 +80,10 @@ def prefix_and_get_chrom_and_count(maf_name,out_maf,names):
             if line.startswith("a"):
                 s_count = 0
                 a_count+= 1
-            if line.startswith("s") and s_count < len(names):
+            if line.startswith("s"):
                 line_arr = line.split()
                 if s_count==0: chrom = line_arr[1]
-                line_arr[1] = "%s:%s" % (names[s_count],line_arr[1])
+                else: line_arr[1] = "%s:%s" % (non_ref_genome,line_arr[1])
                 line = " ".join(line_arr)+"\n"
                 s_count+=1
             out.write(line)

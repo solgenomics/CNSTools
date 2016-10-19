@@ -78,7 +78,7 @@ def prefix_and_get_chrom_and_count(maf_name,out_maf,names):
             if line.startswith("s"):
                 line_arr = line.split()
                 if s_count==0: chrom = line_arr[1]
-                line_arr[1] = "%s:%s" % (names[s_count],line_arr[1])
+                else: line_arr[1] = "%s:%s" % (names[1],line_arr[1])
                 line = " ".join(line_arr)+"\n"
                 s_count+=1
             out.write(line)

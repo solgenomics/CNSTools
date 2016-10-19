@@ -8,8 +8,8 @@ config_defaults = {
     #"reference": "Metru",
     #"tree": "",
     "out_folder":".",
-    "roast_path": "roast",
-    "msa_view_path": "msa_view",
+    "multiz_bin_path": "",
+    "msa_view_bin_path": "",
     "num_processes": 1,
 }
 
@@ -29,8 +29,8 @@ def run(config_path):
     ref_genome_gff3 = config["ref_genome_gff3"]
     reference = config["reference"]
     tree = config["tree"]
-    roast_path = config["roast_path"]
-    msa_view_path = config["msa_view_path"]
+    multiz_bin_path = config["multiz_bin_path"]
+    msa_view_bin_path = config["msa_view_bin_path"]
     num_processes = config["num_processes"]
     out_folder = config["out_folder"]
 
@@ -49,7 +49,9 @@ def run(config_path):
     roast_commandlists = []
     for chrom in per_chrom_labeled_mafs:
         outfile = os.path.join(out_folder,chrom+".roast.maf")
-        roast_commandlists.append([roast_path,'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",chrom)), chrom+".*.sing.maf", outfile])
+        roast_commandlists.append(["roast",'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",chrom)), chrom+".*.sing.maf", outfile])
+        if multiz_bin_path!="":
+            roast_commandlists = ["export","PATH="+multiz_bin_path+":$PATH"]+roast_commandlists
     roast_files = [l[-1] for l in roast_commandlists]
     call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast") #runs commands asynchronously with maximum simultanious process count
 

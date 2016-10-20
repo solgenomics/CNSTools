@@ -25,6 +25,7 @@ def run(config_path):
     for key in config_defaults:
         config.setdefault(key, config_defaults[key])
 
+    original_wd = os.getcwd()
     #grab vars from config and make sure the paths are absolute and interperted as such relative to the config file.
     os.chdir(os.path.dirname(os.path.abspath(config_path)))
 
@@ -66,11 +67,14 @@ def run(config_path):
         outfile = os.path.join(out_folder,chrom+".roast.maf")
         roast_commandlists.append(["roast",'E="%s"'%chrom,"X=0", '"%s"'%(tree.replace("*",chrom)), chrom+".*.sing.maf", outfile])
     roast_files = [l[-1] for l in roast_commandlists]
-    #call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast",env=cmd_env) #runs commands asynchronously with maximum simultanious process count
+    call_commands_async(roast_commandlists,num_processes,shell=True,tracker_name="roast",env=cmd_env) #runs commands asynchronously with a maximum simultanious process count
+
+    chrom_gffs = split_gff(ref_genome_gff3)
+
 
     prepared_for_msa = []
     for maf_name in roast_files:
-        out_name = os.path.splitext(maf_name)[0]+".qchrom.maf"
+        out_name = os.path.splitext(maf_name)[0]+".nochrom.maf"
         num_entries = remove_target_chrom_and_count(maf_name,out_name,reference)
         if num_entries > 0:
             prepared_for_msa.append(out_name)
@@ -79,6 +83,10 @@ def run(config_path):
         out_name = os.path.splitext(maf_name)[0]+".4d-codons.ss"
         mas_commandlists.append(["msa_view","--in-format","MAF","--4d",maf_name,"--features",ref_genome_gff3,">",out_name])
     call_commands_async(mas_commandlists,num_processes,shell=True,tracker_name="msa",env=cmd_env)
+
+
+
+    os.chdir(original_wd)
 
 
 def prefix_and_get_chrom_and_count(maf_name,out_maf,names):
@@ -114,3 +122,21 @@ def remove_target_chrom_and_count(maf_name,out_maf,ref_name):
                 line = " ".join(line_arr)+"\n"
             out.write(line)
     return a_count
+
+def split_gff(ref_genome_gff3,out_foler):
+    out_form = os.path.join(out_foler,"{chrom}.gff")
+    files = {}
+    file_paths = 
+    with open(ref_genome_gff3) as gff:
+        for line in gff:
+            if line.startswith("##FASTA"): break
+            if line.startswith("#"): continue
+            chrom = line.split(None,1)[0].strip()
+            if not chrom in files:
+                file_paths.append(out_form.format(chrom=chrom))
+                files[chrom] = open(file_paths[-1],"w")
+                files[chrom].write("##gff-version 3\n")
+            files[chrom].write(line)
+        for chrom in files:
+            files[chrom].close()
+    return file_paths

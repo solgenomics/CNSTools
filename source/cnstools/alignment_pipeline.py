@@ -15,7 +15,6 @@ config_defaults = {
     "lastz_options":"C=0 E=30 H=2000 K=2200 L=6000 M=50 O=400 T=2 Y=3400",#Q=/home/dal333/alignment_step/test_input/HoxD55.q",
     "chainNet_options":"-minSpace=25",
     "lastz_path":"lastz",
-    "alt_shell_path":None,
 }
 
 def parser(parser_add_func,name):
@@ -37,8 +36,6 @@ def run(config_path):
     query_genomes = config["query_genomes"]
     ref_genome = config["ref_genome"]
     out_folder = config["out_folder"]
-    if config["alt_shell_path"]!=None:
-        call_commands_async.alt_shell_path = config["alt_shell_path"]
 
     num_processes = config["num_processes"] #make param
 
@@ -130,8 +127,7 @@ def run(config_path):
         call_commands_async(axtToMaf_commands,num_processes,tracker_name="axtToMaf")
 
 
-def call_commands_async(command_iterable,num,shell=False,tracker_name="Running command", env=None):
-    if env == None: env = os.environ
+def call_commands_async(command_iterable,num,shell=False,tracker_name="Running command", env=os.environ):
     process_list = []
     finished = []
     try:
@@ -141,11 +137,8 @@ def call_commands_async(command_iterable,num,shell=False,tracker_name="Running c
     for command in command_iterable:
         print command
         if shell==True:
-            if call_commands_async.alt_shell_path!=None:
-                process_list.append(subprocess.Popen(" ".join(command),env=env,shell=True,executable=call_commands_async.alt_shell_path))
-            else:
-                process_list.append(subprocess.Popen(" ".join(command),env=env,shell=True))
-        elif shell==False:
+            process_list.append(subprocess.Popen(" ".join(command),env=env,shell=True))
+        else:
             process_list.append(subprocess.Popen(command),env=env)
         if tracker and len(process_list) >= num: tracker.status("%s/%s processes active"%(len(process_list),num))
         while len(process_list) >= num:
@@ -161,4 +154,3 @@ def call_commands_async(command_iterable,num,shell=False,tracker_name="Running c
         if tracker: tracker.step().display().status("%s/%s processes active"%(len(process_list),num))
     if tracker: tracker.status().done()
     return finished
-call_commands_async.alt_shell_path=None

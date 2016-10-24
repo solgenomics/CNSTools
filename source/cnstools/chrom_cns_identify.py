@@ -13,7 +13,6 @@ from wiggle_to_bed import run as wiggle_to_bed
 
 # json_file_format = {
 #     "chrom_seq_maf":"PATH",
-#     "chrom_conserved_bed":"PATH",
 #     "ref_genome":"PREFIX",
 #     "ref_coding_bed":"PATH",
 #     "chrom_conservation_wig":"PATH",
@@ -29,9 +28,6 @@ def _main(data,output_folder,num_threads,overwrite=False,chrom_name=None):
     datasaver = JSON_saver(create_path(output_folder,"record","json",overwrite=overwrite))
     datasaver.save(data)
 
-    if not chrom_name:
-        chrom_name = chrom_conserved_bed.split(".")[0]
-
     #maf_to_bed
     info = "Convert aligned sequences to .bed:"
     header_print(info)
@@ -42,22 +38,23 @@ def _main(data,output_folder,num_threads,overwrite=False,chrom_name=None):
                index_tag   = "chrom_maf_index")
     datasaver.save(data)
 
-    #$bedtools intersect
-    info = "Intersect aligned regions with conserved regions:"
-    header_print(info)
-    data['conserved_bed'] = create_path(output_folder,"conserved","bed",overwrite=overwrite)
-    cmd = "bedtools intersect -a %s -b %s > %s" % (data['ref_seq_bed'],data['chrom_conserved_bed'],data['conserved_bed'])
-    tracker = Progress_tracker("Running bedtools intersect",1).estimate(False).display()
-    process = subprocess.Popen(cmd, shell=True)
-    process.wait()
-    tracker.done()
-    datasaver.save(data)
+    # #$bedtools intersect
+    # info = "Intersect aligned regions with conserved regions:"
+    # header_print(info)
+    # data['conserved_bed'] = create_path(output_folder,"conserved","bed",overwrite=overwrite)
+    # cmd = "bedtools intersect -a %s -b %s > %s" % (data['ref_seq_bed'],data['chrom_conserved_bed'],data['conserved_bed'])
+    # print cmd
+    # tracker = Progress_tracker("Running bedtools intersect",1).estimate(False).display()
+    # process = subprocess.Popen(cmd, shell=True)
+    # process.wait()
+    # tracker.done()
+    # datasaver.save(data)
 
     #$bedtools subtract
-    info = "Subtract coding regions from conserved aligned regions:"
+    info = "Subtract coding regions from aligned regions:"
     header_print(info)
-    data['potential_cns_bed'] = create_path(output_folder,"potential_cns","bed",overwrite=overwrite)
-    cmd = "bedtools subtract -a %s -b %s > %s" % (data['conserved_bed'],data['ref_coding_bed'],data['potential_cns_bed'])
+    data['aligned_noncoding_bed'] = create_path(output_folder,"aligned_noncoding_bed","bed",overwrite=overwrite)
+    cmd = "bedtools subtract -a %s -b %s > %s" % (data['ref_seq_bed'],data['ref_coding_bed'],data['aligned_noncoding_bed'])
     tracker = Progress_tracker("Running bedtools subtract",1).estimate(False).display()
     process = subprocess.Popen(cmd, shell=True)
     process.wait()
@@ -77,7 +74,7 @@ def _main(data,output_folder,num_threads,overwrite=False,chrom_name=None):
     info = "Intersecting wiggle bed with the potential cns bed"
     header_print(info)
     data['cns_bed'] = create_path(output_folder,"cns","bed",overwrite=overwrite)
-    cmd = "bedtools intersect -a %s -b %s > %s" % (data['potential_cns_bed'],data['best_conserved_bed'],data['cns_bed'])
+    cmd = "bedtools intersect -a %s -b %s > %s" % (data['aligned_noncoding_bed'],data['best_conserved_bed'],data['cns_bed'])
     tracker = Progress_tracker("Running bedtools intersect",1).estimate(False).display()
     process = subprocess.Popen(cmd, shell=True)
     process.wait()

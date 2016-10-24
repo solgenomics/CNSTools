@@ -4,6 +4,7 @@ import os
 import threading
 import json
 import inspect
+#hello
 
 def safe_print(content,print_id=None):
     sys.stdout.flush()
@@ -143,7 +144,7 @@ class Progress_tracker():
         precentComplete = int((self.progress*100))
         tRemain = self._parseTime(int(time_elapsed/self.progress*(1-self.progress))) if self.progress!=0 else self._parseTime(float('inf'))
 
-        write_string = "\033[F\x1b[2K%s:" % self.name
+        write_string = "%s:" % self.name#"\033[F\x1b[2K%s:" % self.name
         write_string_size = len(self.name)+1
         write_string+= " "*(8*4-write_string_size)
         write_string_size = 8*4

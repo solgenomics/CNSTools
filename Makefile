@@ -1,13 +1,14 @@
 
 SOURCE_DIRECTORIES = $(shell find ./source/ -type d)
 SOURCE_FILES = $(shell find ./source/ -type f -name '*')
+OTHER_SOURCE_FILES = $(shell find ./source/ -type f -name '_*')
 DOC_DIRECTORIES = $(shell find ./docs/ -type d)
 DOC_FILES = $(shell find ./docs/ -type f -name '*')
 DOC_PATH_CHANGE_COMMAND = import os; import sys; sys.path.insert(0, os.path.abspath(\"../source\"));
 
 all: cnstools docs
 
-cnstools: macwash_source ./source $(SOURCE_DIRECTORIES) $(SOURCE_FILES)
+cnstools: macwash_source ./source $(SOURCE_DIRECTORIES) $(SOURCE_FILES) 
 	mkdir -p ./build/
 	find ./build/ -name "cnstools" -delete
 	cp -r ./source/cnstools ./build/cnstools

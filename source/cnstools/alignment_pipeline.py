@@ -8,8 +8,8 @@ from _utils import Progress_tracker
 config_defaults = {
     #"ref_genome":"/home/dal333/haudrey_test_data/TAIR10_chr_all.fas",
     #"query_genomes":["/home/dal333/haudrey_test_data/crubella_183_v1.fa","/home/dal333/haudrey_test_data/Alyrata_107_v1.fa"],
-    #"out_folder":"./",
     #optional:
+    "out_folder":"./",
     "chaining_script_directory":"",
     "num_processes":1,
     "lastz_options":"C=0 E=30 H=2000 K=2200 L=6000 M=50 O=400 T=2 Y=3400",#Q=/home/dal333/alignment_step/test_input/HoxD55.q",
@@ -35,11 +35,12 @@ def run(config_path):
     chainNet_options = shlex.split(config["chainNet_options"])
     query_genomes = config["query_genomes"]
     ref_genome = config["ref_genome"]
+    reference = config["reference"]
     out_folder = config["out_folder"]
 
     num_processes = config["num_processes"] #make param
 
-    split_fasta = [file.path for file in Fasta_handler(ref_genome).split(1,file_prefix="ref.",file_suffix=".split",out_folder=out_folder)]
+    split_fasta = [file.path for file in Fasta_handler(ref_genome).split(1,file_prefix="ref.",file_suffix="",out_folder=out_folder)]
 
     print "Reference file has %s sequences" % len(split_fasta)
     split_fasta.sort(key=lambda name:os.stat(name).st_size)
@@ -56,8 +57,12 @@ def run(config_path):
     twobit_files = [os.path.splitext(file)[0]+".2bit" for file in split_fasta]
     faToTwoBit_commandlists = [[chaining_script_directory+"faToTwoBit", in_file, out_file] for in_file,out_file in zip(split_fasta,twobit_files)]
     call_commands_async(faToTwoBit_commandlists,num_processes,tracker_name="faToTwoBit")
+    
+    config["aligned_query_genomes"] = {}
 
-    for query_genome in query_genomes:
+    for query_genome_name in query_genomes:
+
+        query_genome = query_genomes[query_genome_name]
 
         #faSize, gets size of genome fasta file and makes .sizes file
         query_genome_sizes = os.path.splitext(query_genome)[0]+".sizes"
@@ -73,9 +78,7 @@ def run(config_path):
         prefix = os.path.splitext(os.path.basename(query_genome))[0]+"_to_"
         lav_files = [os.path.join(os.path.dirname(file),prefix+os.path.splitext(os.path.basename(file))[0]+".lav") for file in split_fasta]
         lastz_commandlists = [[lastz_path, in_file, query_genome, "--format=lav"] + lastz_options + [">", out_file] for in_file,out_file in zip(split_fasta,lav_files)]
-        k = call_commands_async(lastz_commandlists,num_processes,shell=True,tracker_name="lastz")
-
-        #print len(k),"/",len(split_fasta)
+        call_commands_async(lastz_commandlists,num_processes,shell=True,tracker_name="lastz")
         
         #lavToAxt, converts .lav files and adds sequences, makes .axt files
         axt_files = [os.path.splitext(file)[0]+".axt" for file in lav_files]
@@ -125,23 +128,29 @@ def run(config_path):
         maf_files = [os.path.splitext(file)[0]+".maf" for file in sorted_axt_files]
         axtToMaf_commands = [[chaining_script_directory+"axtToMaf", in_file, ref_size, query_genome_sizes, out_file] for in_file,ref_size,out_file in zip(sorted_axt_files,sizes_files,maf_files)]
         call_commands_async(axtToMaf_commands,num_processes,tracker_name="axtToMaf")
+        
+        config["aligned_query_genomes"][query_genome_name] = maf_files
+    with open(os.path.join(config["out_folder"],"results.config.json"),"w") as out:
+        json.dump(config,out,sort_keys=True,indent=4)
 
 
-def call_commands_async(command_iterable,num,shell=False,tracker_name="Running command", env=os.environ):
+def call_commands_async(command_iterable,num,shell=False,tracker_name=None, env=os.environ):
     process_list = []
     finished = []
-    try:
+    if len(command_iterable)<num: num = len(command_iterable)
+    if tracker_name:
         tracker = Progress_tracker(tracker_name,len(command_iterable)).estimate(False)
-    except:
+        tracker.display()
+    else:
         tracker = None
     for command in command_iterable:
-        print command
+        #print " ".join(command)
         if shell==True:
             process_list.append(subprocess.Popen(" ".join(command),env=env,shell=True))
         else:
-            process_list.append(subprocess.Popen(command),env=env)
-        if tracker and len(process_list) >= num: tracker.status("%s/%s processes active"%(len(process_list),num))
+            process_list.append(subprocess.Popen(command,env=env))
         while len(process_list) >= num:
+            if tracker: tracker.status("%s/%s processes active"%(len(process_list),num))
             pid,exitstat = os.waitpid(-1,0)
             for i in range(len(process_list)-1,-1,-1):
                 if process_list[i].pid == pid or process_list[i].poll() != None:

@@ -12,7 +12,7 @@ from combine_cns import _main as combine_cns
 #     "ref_aligned_chroms":{
 #         "CHROM":{
 #             "chrom_seq_maf":"PATH",
-#             "chrom_conserved_bed":"PATH"
+#             "chrom_conservation_wig":"PATH"
 #         }
 #     },
 #     "ref_genome":"PREFIX",
@@ -36,7 +36,6 @@ def _main(data,output_folder,num_threads,overwrite=False):
         header_print("Identify CNS on %s" % chromosome,h_type=2)
         chromDat = {key:data[key] for key in data if key!="ref_aligned_chroms"}
         chromDat['chrom_seq_maf'] = data['ref_aligned_chroms'][chromosome]['chrom_seq_maf']
-        chromDat['chrom_conserved_bed'] = data['ref_aligned_chroms'][chromosome]['chrom_conserved_bed']
         chromDat['chrom_conservation_wig'] = data['ref_aligned_chroms'][chromosome]['chrom_conservation_wig']
         chromDat['out'] = create_path(data['out']+"chrom/"+chromosome,overwrite=overwrite)
         chromDat = chrom_cns_identify(chromDat,chromDat['out'],num_threads,overwrite=overwrite,chrom_name=chromosome)

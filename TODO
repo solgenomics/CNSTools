@@ -1,0 +1,9 @@
+ ☐ @critical finish the phastcons/conservation script
+
+ ☐ @high make sure config files output appropriate config files for next step in the pipeline. Chromosome folders do not need "results.json"
+ ☐ @high transition from filetype_classes (where all data in a file is kept in memory), to file_handler classes (where files are work with line-by-line) this should work for almost everything in the program. For maf/bed intersection: first the maf can be converted to bed. Instead of storing the whole maf, the order of their entries can be store by a unique ID. The the maf_bed can be intersected with bed using bedtools. Then, assuming the bed is in the same order as the original maf (which I would hope it would be), the maf and bed can then be iterated over at the same time to remove the nessicary peices.
+
+ ☐ @low determine a better way to package the program (just as a library but with setup.py? just as a command-line program?)
+ ☐ @low try to reduce format switching as much as possible
+ ☐ @low try to reduce program to only the commands: alignment, conservation, identification
+ ☐ @low ensure these can be done per-chromosome or whole genomes!

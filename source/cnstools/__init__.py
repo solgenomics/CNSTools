@@ -17,7 +17,7 @@ names = [
     "cns_to_bed",
     "cns_type_motif_graph",
     "alignment_pipeline",
-    "phastcons_pipeline"
+    "phastcons_pipeline",
 ]
 __all__ = names
 for name in names:

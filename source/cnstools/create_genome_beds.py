@@ -30,7 +30,7 @@ def _main(data,output_folder,overwrite=False):
     data['ref_coding_bed'] = create_path(output_folder,"ref_coding","bed",overwrite=overwrite)
     gff3_to_bed(gff3_file   = data['genomes'][data['ref_genome']]['annot_gff3'],
                 bed_out     = data['ref_coding_bed'],
-                type_list   = ['CDS'],
+                type_list   = ["CDS", "miRNA", "ncRNA", "rRNA", "snoRNA", "snRNA", "tRNA"],
                 sequence_prefix = data['ref_genome']+":")
     datasaver.save(data)
 

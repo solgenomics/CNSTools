@@ -579,7 +579,7 @@ class Maf(Serial_Filetype):
                 new_maf.entries.append(new_maf_entry)
         return new_maf
 
-    def cns_from_proxim_beds(self,cns_proxim_beds,index_tag="maf_index"):
+    def cns_from_proxim_beds(self,cns_proxim_beds,index_tag="maf_index",prefix=""):
         """Creates a :py:class:`Cns` object from a :py:class:`Maf` object and multiple :py:class:`Bed13` object conatining gene proximity information for each genome. 
         Also filters for unwanted sequences.
         
@@ -589,7 +589,7 @@ class Maf(Serial_Filetype):
         """
         cns = Cns()
         for i in range(len(self.entries)):
-            cns.add_entry(i)
+            cns.add_entry(prefix+str(i))
         for genome in cns_proxim_beds:
             for entry in cns_proxim_beds[genome].entries:
                 try:

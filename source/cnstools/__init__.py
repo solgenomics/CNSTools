@@ -5,8 +5,6 @@ python scripts. Currently this documentation only covers the imported module, mo
 #A list of all task modules to be imported and added to __all__.
 names = [
     "analyze_cns",
-    "chrom_cns_identify",
-    "create_genome_beds",
     "full_cns_identify",
     "gff3_to_bed",
     "maf_to_bed",

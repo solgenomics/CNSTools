@@ -1,0 +1,10 @@
+{
+    "chaining_script_bin_path":"",
+    "chainNet_options":"-minSpace=25",
+    "genomes":{"A":"/home/dal333/haudrey_test_data/crubella_183_v1.fa","B":"/home/dal333/haudrey_test_data/Alyrata_107_v1.fa"},
+    "lastz_bin_path":"",
+    "lastz_options":"C=0 E=30 H=2000 K=2200 L=6000 M=50 O=400 T=2 Y=3400",
+    "num_processes":1,
+    "out_folder":"./",
+    "reference":"A",
+}

@@ -1,0 +1,11 @@
+{
+    "aligned_query_genomes":{"A":["f1.maf","f2.maf"]},
+    "annotations":{"A":"/home/dal333/haudrey_test_data/crubella_183_v1.gff","B":"/home/dal333/haudrey_test_data/Alyrata_107_v1.gff"},
+    "msa_view_bin_path":"",
+    "multiz_bin_path":"",
+    "num_processes":1,
+    "out_folder":"./",
+    "phast_bin_path":"",
+    "reference":"A",
+    "tree":"(Metru,(*,Blah))",
+}

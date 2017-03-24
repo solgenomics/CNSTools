@@ -5,6 +5,7 @@ import subprocess
 import threading
 import json
 import inspect
+import csv
 #hello
 
 
@@ -127,6 +128,54 @@ class JSON_saver(object):
         with open(self.path,'w') as out:
             json.dump(data,out,sort_keys=True,indent=4)
         return self
+
+# class Binary_newick_tree(object):
+#     """"""
+#     def __init__(self,binary_treestring,tree=None):
+#         if tree: self.tree = tree
+#         else:    self.tree = self.binary_parse(binary_treestring)
+
+#     def get(self,filter_ids=None,remove_ids=None):
+#         rTree = self.tree
+#         if filter_ids: rTree = self.filter(filter_ids,rTree)
+#         if remove_ids: rTree = self.remove(remove_ids,rTree)
+#         return self._build_string(rTree)
+
+#     def binary_parse(self,treestring):
+#         treestring = treestring.strip()
+#         if "," in treestring:
+#             depth = 0
+#             cutLoc = None
+#             for i,char in enumerate(treestring):
+#                 if char=="," and depth == 1:
+#                     cutLoc = i
+#                     break
+#                 else:
+#                     if char=="(": depth+=1
+#                     elif char==")": depth-=1
+#             return (self.binary_parse(treestring[1:cutLoc]),self.binary_parse(treestring[cutLoc+1:-1]))
+#         else:
+#             return treestring
+
+#     def _build_string(self,branch):
+#         if isinstance(branch,tuple):
+#             return "("+",".join(self._build_string(sub_branch) for sub_branch in branch)+")"
+#         else: 
+#             return str(branch)
+
+#     def remove(self,ids,branch=None):
+#         if not branch: branch = self.tree
+#         newbranch = tuple(self.remove(ids,sub_branch) if isinstance(sub_branch,tuple) else sub_branch\
+#                      for sub_branch in branch if (sub_branch not in ids))
+#         cleaned = tuple(sub_branch for sub_branch in newbranch if sub_branch!=None)
+#         return cleaned if len(cleaned)>1 else cleaned[0] if cleaned else None
+
+#     def filter(self,ids,branch=None):
+#         if not branch: branch = self.tree
+#         newbranch = tuple(self.filter(ids,sub_branch) if isinstance(sub_branch,tuple) else sub_branch\
+#                      for sub_branch in branch if (sub_branch in ids or isinstance(sub_branch,tuple)))
+#         cleaned = tuple(sub_branch for sub_branch in newbranch if sub_branch!=None)
+#         return cleaned if len(cleaned)>1 else cleaned[0] if cleaned else None
 
 class Progress_tracker():
     def __init__(self,name,size):

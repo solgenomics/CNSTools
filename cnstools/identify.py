@@ -27,16 +27,18 @@ def identify(out_folder,
         chr_tracker = MultiTracker("Identifying CNS on "+chrom_name,1,estimate=False,style="noProg")
         chrom_out = os.path.join(out_folder,chrom_name+"_cns")
         make_dir(chrom_out)
-        chrom_cns_identify(reference,
-                           chrom_data,
-                           chrom_name,
-                           chrom_out,
-                           reference_coding_bed,
-                           min_len,
-                           min_seg_score,
-                           max_conservation_gap,
-                           min_site_score,
-                           chr_tracker)
+        cns_maf = chrom_cns_identify(reference,
+                                     chrom_data,
+                                     chrom_name,
+                                     chrom_out,
+                                     reference_coding_bed,
+                                     min_len,
+                                     min_seg_score,
+                                     max_conservation_gap,
+                                     min_site_score,
+                                     chr_tracker)
+        chrom_data[chrom_name]["cns"] = cns_maf
+    return {"chrom_data":chrom_data}
 
 def chrom_cns_identify(reference,
                        chrom_data,
@@ -50,7 +52,6 @@ def chrom_cns_identify(reference,
                        tracker):
 
     chrom = chrom_data[chrom_name]
-    
 
     #Format the MAF file to have a species identifier on the reference sequence
     chrom_seq_maf = os.path.join(chrom_out,"chrom_seqs_formatted.maf")
@@ -102,55 +103,7 @@ def chrom_cns_identify(reference,
                                         min_len       = min_cns_length,
                                         parent        = tracker,
                                         tracker_name  = "Slice MAF entries by CNS BED")
-
-    # #for iteration over genomes regardless of reference
-    # all_genomes = config["genomes"]
-
-    # #maf_to_bed
-    # info = "Convert per-genome CNS regions to .bed:"
-    # header_print(info)
-    # chrom['genome_cns_beds_folder'] = os.path.join(chrom_out,"genome_cns_beds")
-    # try:
-    #     os.makedirs(chrom['genome_cns_beds_folder'])
-    # except OSError:
-    #     if not os.path.isdir(chrom['genome_cns_beds_folder']):
-    #         raise
-    # chrom['genome_cns_beds'] = {}
-    # cns_maf = Maf(file_name=chrom['cns_maf'])
-    # for genome in all_genomes:
-    #     chrom['genome_cns_beds'][genome] = os.path.join(chrom['genome_cns_beds_folder'],genome+"_cns_"+chrom_name+".bed")
-    #     bed = cns_maf.to_bed(genome_name=genome,index_tag="cns_maf_index")
-    #     bed.save_file(chrom['genome_cns_beds'][genome])
-    # del cns_maf
-
-
-    # #$bedtools closest
-    # info = "Find closest gene for each CNS region:"
-    # header_print(info)
-    # chrom['gene_proximity_beds_folder'] = os.path.join(chrom_out,"gene_proximity_beds")
-    # try:
-    #     os.makedirs(chrom['gene_proximity_beds_folder'])
-    # except OSError:
-    #     if not os.path.isdir(chrom['gene_proximity_beds_folder']):
-    #         raise
-    # chrom['gene_proximity_beds'] = {}
-    # for genome in all_genomes:
-    #     chrom['gene_proximity_beds'][genome] = os.path.join(chrom['gene_proximity_beds_folder'],genome+"_proxim.bed")
-    #     cmd = "bedtools closest -D a -a %s -b %s > %s" % \
-    #         (chrom['genome_cns_beds'][genome],
-    #          config['genome_gene_beds'][genome],
-    #          chrom['gene_proximity_beds'][genome])
-    #     process = subprocess.Popen(cmd, shell=True)
-    #     process.wait()
-
-    # #maf_and_proxim_bed_to_cns
-    # info = "Process proximity and maf files into .cns file:"
-    # header_print(info)
-    # chrom['results'] = os.path.join(chrom_out,"identified_CNSs.cns")
-    # cns_proxim_beds = {genome:Bed13(chrom['gene_proximity_beds'][genome]) for genome in all_genomes}
-    # Maf(file_name=chrom['cns_maf'])\
-    #     .cns_from_proxim_beds(cns_proxim_beds,"cns_maf_index",prefix=chrom_name+".")\
-    #     .save_file(chrom['results'])    
+    return cns_maf
 
 def _maf_format(reference):
     def func(entry):
@@ -166,22 +119,22 @@ def create_genome_beds(out_folder, annotations, reference, coding_features, trac
     #gff3_to_bed
     ref_bed_tracker = tracker.subTracker("Extract reference CDS to .bed",1,estimate=False,style="noProg")
     reference_coding_bed = os.path.join(gb_out,"ref_coding.bed")
-    ref_gff_file = fhs.gff3(reference_coding_bed)
+    ref_gff_file = fhs.gff3(annotations[reference])
     ref_coding_bed_file = ref_gff_file.to_bed(reference_coding_bed,
                                               type_list = coding_features, 
                                               sequence_prefix = reference+":")
     ref_bed_tracker.done()
 
-    #gff3_to_bed
-    ref_bed_tracker = tracker.subTracker("Extract genomes' genes to .bed",len(annotations),estimate=False,style="noProg")
-    genome_gene_beds = {}
-    for genome in annotations:
-        genome_gene_beds[genome] = os.path.join(gb_out,genome+"_genes.bed")
-        gff_file = fhs.gff3(annotations[genome])
-        gff_file.to_bed(genome_gene_beds[genome],
-                        type_list=['gene'],
-                        genome=genome)
-    return reference_coding_bed, genome_gene_beds
+    # #gff3_to_bed
+    # ref_bed_tracker = tracker.subTracker("Extract genomes' genes to .bed",len(annotations),estimate=False,style="noProg")
+    # genome_gene_beds = {}
+    # for genome in annotations:
+    #     genome_gene_beds[genome] = os.path.join(gb_out,genome+"_genes.bed")
+    #     gff_file = fhs.gff3(annotations[genome])
+    #     gff_file.to_bed(genome_gene_beds[genome],
+    #                     type_list=['gene'],
+    #                     genome=genome)
+    return reference_coding_bed
 
 def config_identify(config_path): 
     '''Runs the `identify` function but loads arguements from a config file and uses the directory of that file as the working directory. It also saves a file called "identify.results.json" in that directory.'''

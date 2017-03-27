@@ -156,7 +156,12 @@ class MultiTracker(_Tracker):
 
     def freeze(self):
         with self.lock:
-            print("\n"*(len(self.display(depth=1))-1))
+            if self.base_tracker()!=self:
+                self.display()
+            else:
+                self.auto_display(0)
+                self.display()
+                print("\n"*(len(self.display(depth=1))-1))
             return self
 
     def done(self):

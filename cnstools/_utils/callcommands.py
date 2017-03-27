@@ -37,6 +37,7 @@ def call_commands_async(command_list,num,shell=False,parent=None,tracker_name=No
         else:
             tracker = MultiTracker(tracker_name,len(command_list),estimate=estimate,style="fraction").auto_display(1)
         tracker.display()   
+        tracker.toggle()
     for command in command_list:
         #print " ".join(command)
         kwargs = {"env":env, "stdout":subprocess.PIPE if stdout else null_file, "stderr":subprocess.PIPE if stderr else null_file}

@@ -35,8 +35,7 @@ def align(reference, # ex:"A"
 
     #split fasta files to on file per sequence
     orig_fasta = fhs.fasta.Handler(ref_genome)
-    split_tracker = ref_prep_tracker.subTracker("Splitting %s"%os.path.basename(ref_genome),orig_fasta.size,style="percent")
-    split_fastas = [file.path for file in orig_fasta.split(1,file_prefix="%s."%reference,file_suffix="",out_folder=out_folder,tracker=split_tracker)]
+    split_fastas = [file.path for file in orig_fasta.split(1,file_prefix="%s."%reference,file_suffix="",out_folder=out_folder,parent=ref_prep_tracker,tracker_name="Spliting Ref. fasta")]
     
     #distribute the hard jobs (mostly so that the status bar moves more uniformly). The list is still weighted towards the left though. :)
     split_fastas.sort(key = lambda name: os.stat(name).st_size, reverse = True)
@@ -94,7 +93,7 @@ def align(reference, # ex:"A"
 
         #chainNet makes .no_synt.chainnet files
         no_synt_chainnet_files = [os.path.splitext(file)[0]+".chainnet" for file in prenet_files]
-        chainNet_commandlists = [["chainNet"] + chainNet_options + [in_file, size_file, query_genome_sizes, out_file, "/dev/null"] for in_file,size_file,out_file in zip(prenet_files,sizes_files,no_synt_chainnet_files)]
+        chainNet_commandlists = [["chainNet"] + [chainNet_options] + [in_file, size_file, query_genome_sizes, out_file, "/dev/null"] for in_file,size_file,out_file in zip(prenet_files,sizes_files,no_synt_chainnet_files)]
         call_commands_async(chainNet_commandlists,num_processes,parent=gen_tracker,tracker_name="chainNet",stderr=False,env=cmd_env)
 
         #netSynteny makes .chainnet files
@@ -114,7 +113,7 @@ def align(reference, # ex:"A"
         #netToAxt makes .filter.axt files
         filtered_axt_files = [os.path.splitext(file)[0]+".filter.axt" for file in axt_files]
         netFilter_commands = [["netToAxt", in_file, prenet_file, twobit_file, query_genome_twobit, out_file] for in_file,prenet_file,twobit_file,out_file in zip(filter_files,prenet_files,twobit_files,filtered_axt_files)]
-        call_commands_async(netFilter_commands,num_processes,parent=gen_tracker,tracker_name="netToAxt",env=cmd_env)
+        call_commands_async(netFilter_commands,num_processes,parent=gen_tracker,tracker_name="netToAxt",env=cmd_env,stderr=False)
 
         #axtSort makes .sort.axt files
         sorted_axt_files = [os.path.splitext(file)[0]+".sort.axt" for file in filtered_axt_files]
@@ -130,8 +129,6 @@ def align(reference, # ex:"A"
         gen_tracker.done()
 
     tracker.freeze()
-
-
     return results
 
 def config_align(config_path): 
@@ -145,7 +142,7 @@ def config_align(config_path):
     # combine results dict with config and output as JSON
     results = align_results.update(copy.deepcopy(config))
     results_path = os.path.join(config_directory,"align.results.json")
-    with open(results_path) as results_file:
+    with open(results_path,"w") as results_file:
         json.dump(results,results_file,sort_keys=True,indent=4)
     os.chdir(original_wd)
 

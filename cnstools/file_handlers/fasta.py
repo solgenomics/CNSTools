@@ -43,16 +43,23 @@ class Handler(ah.Handler):
             yield Entry(entry_description,entry_data)
             if tracker_name: tracker.done()
 
-    def split(self,num_per_file=1,out_folder=in_place,file_prefix=in_place,file_suffix="",file_extension=".fa",tracker=None):
+    def split(self,num_per_file=1,out_folder=in_place,file_prefix=in_place,file_suffix="",file_extension=".fa",parent=None,tracker_name=None):
         file_prefix = (file_prefix) if file_prefix != self.in_place else os.path.splitext(os.path.basename(self.path))[0]+"."
         out_folder = (out_folder) if out_folder != self.in_place else os.path.dirname(self.path)
         split_list = []
+        size = os.stat(self.path).st_size
+        if tracker_name:
+            size = os.stat(self.path).st_size
+            if parent!=None:
+                tracker = parent.subTracker(tracker_name,size,estimate=False,style="percent")
+            else:
+                tracker = MultiTracker(tracker_name,size,estimate=False,style="percent").auto_display(1)
         with open(self.path,"r") as file_obj:
             start_found = False
             count = 0
             out_obj = None
             for line in file_obj:
-                if tracker: tracker.step(len(line))
+                if tracker_name: tracker.step(len(line))
                 if (not start_found) and (not line.startswith(">")):
                     continue
                 elif line.startswith(">"):
@@ -67,5 +74,5 @@ class Handler(ah.Handler):
                 else:
                     out_obj.write(line)
         if out_obj: out_obj.close()
-        if tracker: tracker.done()
+        if tracker_name: tracker.done()
         return split_list

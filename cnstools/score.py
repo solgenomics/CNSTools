@@ -10,7 +10,9 @@ def score(reference,
           multiz_path   = "",
           num_processes = 1,
           out_folder    = "./",
-          phast_path    = "", **kwargs):
+          phast_path    = "", 
+          cds_seqtypes = ["CDS"],
+          **kwargs):
     '''ROASTs and scores files for conservation'''
 
     tracker = MultiTracker("Scoring alignment",1,estimate=False,style="noProg")
@@ -62,7 +64,7 @@ def score(reference,
             roast_commandlists.append(["roast",'E="%s"'%chrom,"X=0", chr_tree, file_glob, outfile])
             roast_files[chrom] = os.path.join(out_folder,outfile)
     random.shuffle(roast_commandlists)
-    call_commands_async(roast_commandlists,num_processes,shell=True,parent=tracker,tracker_name="ROAST",env=cmd_env) #runs commands asynchronously with a maximum simultanious process count
+    #call_commands_async(roast_commandlists,num_processes,shell=True,parent=tracker,tracker_name="ROAST",env=cmd_env) #runs commands asynchronously with a maximum simultanious process count
     os.chdir(currentwd)
 
     msa_format_tracker = tracker.subTracker("Format MAFs for msa_view",len(roast_files),estimate=True,style="fraction")
@@ -75,11 +77,11 @@ def score(reference,
         if num_entries > 0:
             prepared_for_msa[chrom] = out_name
     msa_format_tracker.done()
-            
+    
     msa_codon_commandlists = []
     codon_4d_names = {}
     gff_split_tracker = tracker.subTracker("Splitting Reference GFF",1,estimate=False,style="noProg")
-    chrom_gffs = split_gff(ref_genome_gff,out_folder)
+    chrom_gffs = split_gff(ref_genome_gff,out_folder,cds_seqtypes)
     gff_split_tracker.done()
     for chrom in prepared_for_msa:
         if chrom in chrom_gffs:
@@ -100,7 +102,6 @@ def score(reference,
     
     #fix this!
     site_4d_names = {key:site_4d_names[key] for key in site_4d_names if os.path.isfile(site_4d_names[key]) and os.stat(site_4d_names[key]).st_size>20}
-
     ss_folder = os.path.join(out_folder,"anonymized_ss")
     call_command(["mkdir","-p",ss_folder],shell=True,env=cmd_env)
     to_combine = []
@@ -144,7 +145,7 @@ def score(reference,
         phast_opts = ["--target-coverage","0.25","--expected-length","12","--rho","0.4"]
         phast_command = ["phastCons"]+phast_opts+["--estimate-rho",e_rho_tree_folder, "--msa-format","MAF",maf_name,temp_model,"--most-conserved", bed_out,"--score","--seqname",chrom,">",wig_out]
         phastcons_commandlists.append(create_model+[";"]+phast_command+[";"]+delete_model)
-    call_commands_async(phastcons_commandlists,num_processes,shell=True,parent=tracker,tracker_name="Running PhastCons",env=cmd_env)
+    #call_commands_async(phastcons_commandlists,num_processes,shell=True,parent=tracker,tracker_name="Running PhastCons",env=cmd_env)
     
     results = {}
     results["chrom_data"] = {chrom:{"chrom_seq_maf":roast_files[chrom],
@@ -197,18 +198,25 @@ def remove_target_chrom_get_target_and_count(maf_name,out_maf,ref_name):
             out.write(line)
     return chrom,a_count
 
-def split_gff(ref_genome_gff,out_foler):
+def split_gff(ref_genome_gff,out_foler,cds_seqtypes):
     out_form = os.path.join(out_foler,"{chrom}.gff")
     file_paths = {}
     with open(ref_genome_gff) as gff:
         for line in gff:
             if line.startswith("##FASTA"): break
             elif line.startswith("#") or line.strip()=="": continue
-            chrom = line.split(None,1)[0].strip()
+            list = line.split()
+            chrom = list[0].strip()
+            seqtype = list[2].strip()
+            list[1] = "splitGFF" #insure identical source
+            if seqtype in cds_seqtypes:
+                list[2] = "CDS"
             if not chrom in file_paths:
                 file_paths[chrom] = out_form.format(chrom=chrom)
+                open(file_paths[chrom],"w").close()
             with open(file_paths[chrom],"a") as file:
-                file.write(line)
+                out = "\t".join(list)
+                file.write(out if out.endswith("\n") else out+"\n")
     return file_paths
 
 def config_score(config_path): 
@@ -220,10 +228,10 @@ def config_score(config_path):
     os.chdir(config_directory)
     score_results = score(**config)
     # combine results dict with config and output as JSON
-    results = score_results.update(copy.deepcopy(config))
+    score_results.update(copy.deepcopy(config))
     results_path = os.path.join(config_directory,"score.results.json")
     with open(results_path,"w") as results_file:
-        json.dump(results,results_file,sort_keys=True,indent=4)
+        json.dump(score_results,results_file,sort_keys=True,indent=4)
     os.chdir(original_wd)
     
 _cl_entry = config_score #function that should be run on command line entry to this subcommand

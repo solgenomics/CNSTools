@@ -1,3 +1,4 @@
+import os
 import abstract_handler as ah
 from .._utils import MultiTracker
 import bed6
@@ -11,9 +12,9 @@ class Sequence(ah.Entry):
         self.strand = strand
         self.srcSize = int(srcSize)
         self.text = text
-    def get_line(self):
+    def get_lines(self):
         """"""
-        return lines ('s '+'\t'.join([str(item) for item in [self.src,self.start,self.size,self.strand,self.srcSize,self.text]]))
+        return ['s '+'\t'.join([str(item) for item in [self.src,self.start,self.size,self.strand,self.srcSize,self.text]])]
         
 
 class Entry(ah.Entry):
@@ -28,7 +29,7 @@ class Entry(ah.Entry):
                     self.a_line = line
                 elif line.startswith('s'):
                     vals = line.split()[1:]
-                    self.sequences.append(_Maf_sequence(*vals))
+                    self.sequences.append(Sequence(*vals))
     def get_lines(self):
         """ See :py:func:`Filetype.get_lines`.
 
@@ -36,8 +37,8 @@ class Entry(ah.Entry):
         lines = []
         if self.a_line: lines.append(self.a_line)
         for sequence in self.sequences:
-            lines.appen(sequence.get_line())
-        return lines
+            lines+=sequence.get_lines()
+        return lines+["\n"]
 
 
 class Comment(ah.Comment):
@@ -115,44 +116,37 @@ class Handler(ah.Handler):
         return newMaf
 
 def _bed_intersect(bed,genome_name,index_tag,max_N_ratio,max_gap_ratio,min_len):
-    bed_entry_iterator = bed._entry_generator()
-    bed_empty = False
-    try:
-        bed_entry = bed_entry_iterator.next()
-        bed_id_string = (kv for kv in bed_entry.name.split(";") if kv.startswith(index_tag))[0]
-        bed_index = int(bed_id_string.split("=")[1])
-    except StopIteration:
-        bed_empty=True
-    maf_index = 0
-    def maf_entry_filter_func(maf_entry):
-        if bed_empty:
+    def func(maf_entry):
+        func.maf_index += 1
+        if func.bed_empty:
             return False
         if isinstance(maf_entry, Comment):
             return maf_entry
         else:
-            if maf_index>bed_index:
-                while maf_index>bed_index:
+            if func.maf_index>func.bed_index:
+                while func.maf_index>func.bed_index:
                     try:
-                        bed_entry = bed_entry_iterator.next()
-                        bed_id_string = (kv for kv in bed_entry.name.split(";") if kv.startswith(index_tag))[0]
-                        bed_index = int(bed_id_string.split("=")[1])
+                        func.bed_entry = func.bed_entry_iterator.next()
+                        func.bed_id_string = (kv for kv in func.bed_entry.name.split(";") if kv.startswith(index_tag)).next()
+                        func.bed_index = int(func.bed_id_string.split("=")[1])
                     except StopIteration:
-                        bed_empty=True
+                        func.bed_empty=True
                         return False
-            if maf_index!=bed_index: raise Error("This should not have happened, bed has outrun maf.")
+            if func.maf_index<func.bed_index:
+                return False
+            #if func.maf_index!=func.bed_index: raise ValueError("This should not have happened, bed has outrun maf.")
         new_maf_entries = []
-        while maf_index==bed_index:
+        while func.maf_index==func.bed_index:
             new_maf_entry = Entry()
             new_maf_entry.a_line = maf_entry.a_line
-            new_maf_entry.a_meta = maf_entry.a_meta
 
             try:
-                mainseq = (seq for seq in maf_entry.sequences if seq.src.split(":")[0].strip()==ref_genome).next()
+                mainseq = (seq for seq in maf_entry.sequences if seq.src.split(":")[0].strip()==genome_name).next()
             except StopIteration:
-                raise ValueError("The provided ref_genome was not found in an alignment.")
+                raise ValueError("The provided genome_name was not found in an alignment.")
 
-            front_offset = bed_entry.chromStart - mainseq.start
-            back_offset = mainseq.start+mainseq.size - bed_entry.chromEnd
+            front_offset = func.bed_entry.chromStart - mainseq.start
+            back_offset = mainseq.start+mainseq.size - func.bed_entry.chromEnd
             front_cut_num = _gap_cut_loc(mainseq.text,front_offset)
             back_cut_num = _gap_cut_loc(reversed(mainseq.text),back_offset)
 
@@ -161,7 +155,7 @@ def _bed_intersect(bed,genome_name,index_tag,max_N_ratio,max_gap_ratio,min_len):
                 new_seq = (seq.text[front_cut_num:-back_cut_num]) if back_cut_num!=0 else (seq.text[front_cut_num:])
                 new_len = _no_gap_len(new_seq)
                 new_start = seq.start + _no_gap_len(front_removed_seq)
-                is_ref_seq = seq.src.split(":")[0].strip()==ref_genome
+                is_ref_seq = seq.src.split(":")[0].strip()==genome_name
                 is_within_params = (_no_gap_len(new_seq) >= min_len) and \
                                    (1-(new_len/float(len(new_seq))) <= max_gap_ratio) and \
                                    (1-_no_gap_len(new_seq.replace('N',''))/float(new_len) <= max_N_ratio)
@@ -180,25 +174,37 @@ def _bed_intersect(bed,genome_name,index_tag,max_N_ratio,max_gap_ratio,min_len):
                     new_maf_entry.sequences[i].text = new_seq_text[i]
                 new_maf_entries.append(new_maf_entry)
             try:
-                bed_entry = bed_entry_iterator.next()
-                bed_id_string = (kv for kv in bed_entry.name.split(";") if kv.startswith(index_tag))[0]
-                bed_index = int(bed_id_string.split("=")[1])
+                func.bed_entry = func.bed_entry_iterator.next()
+                func.bed_id_string = (kv for kv in func.bed_entry.name.split(";") if kv.startswith(index_tag)).next()
+                func.bed_index = int(func.bed_id_string.split("=")[1])
             except StopIteration:
-                bed_empty=True
+                func.bed_empty=True
                 break;
         return new_maf_entries
+    func.bed_entry_iterator = bed6.Handler(bed)._entry_generator()
+    func.bed_empty = False
+    try:
+        func.bed_entry = func.bed_entry_iterator.next()
+        func.bed_id_string = (kv for kv in func.bed_entry.name.split(";") if kv.startswith(index_tag)).next()
+        func.bed_index = int(func.bed_id_string.split("=")[1])
+    except StopIteration:
+        func.bed_empty=True
+    func.maf_index = -1
+    return func
 
 def _to_bed_entry(genome_name=None,index_tag=None):
-    index = 0
     def func(entry):
-        if genome_name==None: 
-            genome_name = entry.sequences[0].src.split(":")[0].strip()
-        seq_to_convert = (seq for seq in entry.sequences if seq.src.split(":")[0].strip()==genome_name)
+        if func.genome_name==None: 
+            func.genome_name = entry.sequences[0].src.split(":")[0].strip()
+        seq_to_convert = (seq for seq in entry.sequences if seq.src.split(":")[0].strip()==func.genome_name)
         for sequence in seq_to_convert:
-            id_string = "%s=%s" % (index_tag,index) if index_tag!=None else None
-            index+=1
-            new_entry = Entry(sequence.src, sequence.start, sequence.start+sequence.size, name=id_string, strand=sequence.strand)
+            id_string = "%s=%s" % (func.index_tag,func.index) if func.index_tag!=None else None
+            func.index+=1
+            new_entry = bed6.Entry(sequence.src, sequence.start, sequence.start+sequence.size, name=id_string, strand=sequence.strand)
         return new_entry
+    func.genome_name = genome_name
+    func.index_tag = index_tag
+    func.index=0
     return func
 
 def _gap_cut_loc(seq,cutNum):

@@ -27,7 +27,7 @@ class Handler(object):
     def entries(self, **kwargs):
         return self._entry_generator(**kwargs)
 
-    def modify(self, modfiy_func, path=None, target_type=None, add_end_break=False, parent=None,tracker_name=None, **kwargs):
+    def modify(self, modify_func, path=None, target_type=None, add_end_break=False, **kwargs):
         if target_type == None:
             target_type = type(self)
         save_path = (path) if path != None else (self.path)
@@ -35,7 +35,7 @@ class Handler(object):
         with open(temp_file_path,"w") as out_obj:
             first = True
             for entry in self._entry_generator(**kwargs):
-                modified = modfiy_func(entry) if not isinstance(entry, Comment) else None
+                modified = modify_func(entry) if not isinstance(entry, Comment) else None
                 if not isinstance(modified, (list,tuple)):
                     if modified == None:
                         modified = [entry]

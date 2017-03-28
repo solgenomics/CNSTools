@@ -45,12 +45,12 @@ def align(reference, # ex:"A"
     #a similar sections to this section will repeat throughout the file, as much of the script is running other scripts!
     sizes_files = [os.path.splitext(file)[0]+".sizes" for file in split_fastas] #generate new names for the output files
     faSize_commandlists = [["faSize", in_file, "-detailed", ">", out_file] for in_file,out_file in zip(split_fastas,sizes_files)] #create a command/arguemnt list for each command to be run in a batch
-    call_commands_async(faSize_commandlists,num_processes,shell=True,parent=ref_prep_tracker,tracker_name="Sizing (faSize)",estimate=True,env=cmd_env) #runs commands asynchronously with maximum simultanious process count, waits for them to finish [shell=True indicates the command list should be joined with spaces and interpreted by a shell, the shell can be changed in the config file]
+    #call_commands_async(faSize_commandlists,num_processes,shell=True,parent=ref_prep_tracker,tracker_name="Sizing (faSize)",estimate=True,env=cmd_env) #runs commands asynchronously with maximum simultanious process count, waits for them to finish [shell=True indicates the command list should be joined with spaces and interpreted by a shell, the shell can be changed in the config file]
 
     #faToTwoBit makes .2bit files
     twobit_files = [os.path.splitext(file)[0]+".2bit" for file in split_fastas]
     faToTwoBit_commandlists = [["faToTwoBit", in_file, out_file] for in_file,out_file in zip(split_fastas,twobit_files)]
-    call_commands_async(faToTwoBit_commandlists,num_processes,parent=ref_prep_tracker,tracker_name="Converting (faToTwoBit)",estimate=True,env=cmd_env)
+    #call_commands_async(faToTwoBit_commandlists,num_processes,parent=ref_prep_tracker,tracker_name="Converting (faToTwoBit)",estimate=True,env=cmd_env)
 
     ref_prep_tracker.done()
     
@@ -63,48 +63,48 @@ def align(reference, # ex:"A"
         #faSize, gets size of genome fasta file and makes .sizes file
         query_genome_sizes = os.path.join(out_folder,os.path.splitext(os.path.basename(query_genome))[0]+".sizes")
         faSize_command = ["faSize", query_genome, "-detailed", ">" , query_genome_sizes]
-        call_command(faSize_command,shell=True,parent=gen_tracker,tracker_name="Sizing (faSize)",env=cmd_env)
+        #call_command(faSize_command,shell=True,parent=gen_tracker,tracker_name="Sizing (faSize)",env=cmd_env)
 
         #faToTwoBit makes genome .2bit file
         query_genome_twobit = os.path.splitext(query_genome_sizes)[0]+".2bit"
         faToTwoBit_command = ["faToTwoBit", query_genome, query_genome_twobit]
-        call_command(faToTwoBit_command,parent=gen_tracker,tracker_name="Converting (faToTwoBit)",env=cmd_env)
+        #call_command(faToTwoBit_command,parent=gen_tracker,tracker_name="Converting (faToTwoBit)",env=cmd_env)
 
         #lastz, aligns and makes .lav files
         prefix = query_genome_name+".to."
         lav_files = [os.path.join(os.path.dirname(file),prefix+os.path.splitext(os.path.basename(file))[0]+".lav") for file in split_fastas]
         lastz_commandlists = [["lastz", in_file, query_genome, "--format=lav"] + lastz_options.split(" ") + [">", out_file] for in_file,out_file in zip(split_fastas,lav_files)]
-        call_commands_async(lastz_commandlists,num_processes,shell=True,parent=gen_tracker,tracker_name="Aligning (lastz)",env=cmd_env,estimate=True)
+        #call_commands_async(lastz_commandlists,num_processes,shell=True,parent=gen_tracker,tracker_name="Aligning (lastz)",env=cmd_env,estimate=True)
         
         #lavToAxt, converts .lav files and adds sequences, makes .axt files
         axt_files = [os.path.splitext(file)[0]+".axt" for file in lav_files]
         lavToAxt_commandlists = [["lavToAxt","-fa","-tfa", in_file, ref_fasta, query_genome, out_file] for in_file,ref_fasta,out_file in zip(lav_files,split_fastas,axt_files)]
-        call_commands_async(lavToAxt_commandlists,num_processes,shell=True,parent=gen_tracker,tracker_name="lavToAxt",env=cmd_env)
+        #call_commands_async(lavToAxt_commandlists,num_processes,shell=True,parent=gen_tracker,tracker_name="lavToAxt",env=cmd_env)
 
         #axtChain, Two matching alignments next to each other are joined into one fragment if they are close enough, and makes .chain files
         chain_files = [os.path.splitext(file)[0]+".chain" for file in axt_files]
         axtChain_commandlists = [["axtChain","-linearGap=loose","-faQ","-faT",in_file, ref_fasta, query_genome, out_file] for in_file,ref_fasta,out_file in zip(axt_files,split_fastas,chain_files)]
-        call_commands_async(axtChain_commandlists,num_processes,parent=gen_tracker,tracker_name="axtChain",stderr=False,env=cmd_env)
+        #call_commands_async(axtChain_commandlists,num_processes,parent=gen_tracker,tracker_name="axtChain",stderr=False,env=cmd_env)
 
         #chainPreNet makes .prenet files
         prenet_files = [os.path.splitext(file)[0]+".prenet" for file in chain_files]
         chainPreNet_commandlists = [["chainPreNet", in_file, size_file, query_genome_sizes, out_file] for in_file,size_file,out_file in zip(chain_files,sizes_files,prenet_files)]
-        call_commands_async(chainPreNet_commandlists,num_processes,parent=gen_tracker,tracker_name="chainPreNet",env=cmd_env)
+        #call_commands_async(chainPreNet_commandlists,num_processes,parent=gen_tracker,tracker_name="chainPreNet",env=cmd_env)
 
         #chainNet makes .no_synt.chainnet files
         no_synt_chainnet_files = [os.path.splitext(file)[0]+".chainnet" for file in prenet_files]
         chainNet_commandlists = [["chainNet"] + [chainNet_options] + [in_file, size_file, query_genome_sizes, out_file, "/dev/null"] for in_file,size_file,out_file in zip(prenet_files,sizes_files,no_synt_chainnet_files)]
-        call_commands_async(chainNet_commandlists,num_processes,parent=gen_tracker,tracker_name="chainNet",stderr=False,env=cmd_env)
+        #call_commands_async(chainNet_commandlists,num_processes,parent=gen_tracker,tracker_name="chainNet",stderr=False,env=cmd_env)
 
         #netSynteny makes .chainnet files
         chainnet_files = [os.path.splitext(file)[0]+".syntenic.chainnet" for file in prenet_files]
         netSynteny_commandlists = [["netSyntenic", in_file, out_file] for in_file,out_file in zip(no_synt_chainnet_files,chainnet_files)]
-        call_commands_async(netSynteny_commandlists,num_processes,parent=gen_tracker,tracker_name="netSynteny",env=cmd_env)
+        #call_commands_async(netSynteny_commandlists,num_processes,parent=gen_tracker,tracker_name="netSynteny",env=cmd_env)
 
         #netFilter makes .filter files
         filter_files = [os.path.splitext(file)[0]+".filter" for file in chainnet_files]
         netFilter_commands = [["netFilter ", in_file, ">", out_file] for in_file,out_file in zip(chainnet_files,filter_files)]
-        call_commands_async(netFilter_commands,num_processes,shell=True,parent=gen_tracker,tracker_name="netFilter",env=cmd_env)
+        #call_commands_async(netFilter_commands,num_processes,shell=True,parent=gen_tracker,tracker_name="netFilter",env=cmd_env)
 
         ##
         ## Aligned and chained! Now convert to .maf file!
@@ -113,17 +113,17 @@ def align(reference, # ex:"A"
         #netToAxt makes .filter.axt files
         filtered_axt_files = [os.path.splitext(file)[0]+".filter.axt" for file in axt_files]
         netFilter_commands = [["netToAxt", in_file, prenet_file, twobit_file, query_genome_twobit, out_file] for in_file,prenet_file,twobit_file,out_file in zip(filter_files,prenet_files,twobit_files,filtered_axt_files)]
-        call_commands_async(netFilter_commands,num_processes,parent=gen_tracker,tracker_name="netToAxt",env=cmd_env,stderr=False)
+        #call_commands_async(netFilter_commands,num_processes,parent=gen_tracker,tracker_name="netToAxt",env=cmd_env,stderr=False)
 
         #axtSort makes .sort.axt files
         sorted_axt_files = [os.path.splitext(file)[0]+".sort.axt" for file in filtered_axt_files]
         axtSort_commands = [["axtSort", in_file, out_file] for in_file,out_file in zip(filtered_axt_files,sorted_axt_files)]
-        call_commands_async(axtSort_commands,num_processes,parent=gen_tracker,tracker_name="axtSort",env=cmd_env)
+        #call_commands_async(axtSort_commands,num_processes,parent=gen_tracker,tracker_name="axtSort",env=cmd_env)
 
         #axtToMaf makes .maf files !!!!!!!
         maf_files = [os.path.splitext(file)[0]+".maf" for file in sorted_axt_files]
         axtToMaf_commands = [["axtToMaf", in_file, ref_size, query_genome_sizes, out_file] for in_file,ref_size,out_file in zip(sorted_axt_files,sizes_files,maf_files)]
-        call_commands_async(axtToMaf_commands,num_processes,parent=gen_tracker,tracker_name="axtToMaf",env=cmd_env)
+        #call_commands_async(axtToMaf_commands,num_processes,parent=gen_tracker,tracker_name="axtToMaf",env=cmd_env)
         
         results["aligned_query_genomes"][query_genome_name] = maf_files
         gen_tracker.done()
@@ -140,10 +140,11 @@ def config_align(config_path):
     os.chdir(config_directory)
     align_results = align(**config)
     # combine results dict with config and output as JSON
-    results = align_results.update(copy.deepcopy(config))
+    align_results.update(copy.deepcopy(config))
+    print align_results
     results_path = os.path.join(config_directory,"align.results.json")
     with open(results_path,"w") as results_file:
-        json.dump(results,results_file,sort_keys=True,indent=4)
+        json.dump(align_results,results_file,sort_keys=True,indent=4)
     os.chdir(original_wd)
 
 _cl_entry = config_align #function that should be run on command line entry to this subcommand

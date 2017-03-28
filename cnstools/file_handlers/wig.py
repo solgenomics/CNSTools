@@ -1,3 +1,4 @@
+import os
 import abstract_handler as ah
 from .._utils import MultiTracker
 import bed6
@@ -19,11 +20,11 @@ class Entry(ah.Entry):
         if len(self.val_list) >= max_conservation_gap:
             start = 0
             end = max_conservation_gap-1
-            below_rejec_score = [val<0.55 for val in self.val_list[start:end]]
+            below_rejec_score = [val<min_site_score for val in self.val_list[start:end]]
             #scans for regions of at least the max_conservation_gap in which all scores are lower that the rejection score
             #and cuts them out of the region
             while end<regions[-1][1]:
-                below_rejec_score.append(self.val_list[end]<0.55)
+                below_rejec_score.append(self.val_list[end]<min_site_score)
                 end+=1
                 if all(below_rejec_score):
                     while end<regions[-1][1] and self.val_list[end] < min_site_score:
@@ -33,7 +34,7 @@ class Entry(ah.Entry):
                     regions.append([end,cut_region[1]])
                     start = regions[-1][0]
                     end = regions[-1][0]+max_conservation_gap-1
-                    below_rejec_score = [val<0.55 for val in self.val_list[start:end]]
+                    below_rejec_score = [val<min_site_score for val in self.val_list[start:end]]
                     if regions[-1][1]-regions[-1][0] < min_seg_length:
                         break
                 below_rejec_score.pop(0)
@@ -86,7 +87,7 @@ class Handler(ah.Handler):
                 yield Entry(step_type,info_dict['chrom'],int(info_dict['start']),int(info_dict['step']),val_list)
             if tracker_name:
                 tracker.done()
-    def to_bed(self,path,include_comments=False,genome=None,**kwargs):
+    def to_bed(self,path,include_comments=False,genome=None,parent=None,tracker_name=None,**kwargs):
         def mod_func(entry):
             return entry.to_bed6_entries(**kwargs)
-        return self.modify(mod_func,path=path,target_type=bed6.Handler,include_comments=include_comments,genome=genome)
+        return self.modify(mod_func,path=path,target_type=bed6.Handler,include_comments=include_comments,genome=genome,parent=parent,tracker_name=tracker_name)

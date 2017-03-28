@@ -1,4 +1,4 @@
-import os
+import os, json
 from ._utils import MultiTracker, make_dir, call_command
 import file_handlers as fhs
 
@@ -11,6 +11,9 @@ def identify(out_folder,
              min_seg_score,
              max_conservation_gap,
              min_site_score,
+             max_cns_N_ratio,
+             max_cns_gap_ratio,
+             bedtools_path = "",
              **kwargs):
     tracker = MultiTracker("Identifying CNS",len(chrom_data),estimate=False,style="fraction")
     tracker.auto_display(1)
@@ -21,10 +24,10 @@ def identify(out_folder,
 
     make_dir(out_folder)
 
-    reference_coding_bed, genome_gene_beds = create_genome_beds(out_folder, annotations, reference, coding_features, tracker)
+    reference_coding_bed = create_genome_beds(out_folder, annotations, reference, coding_features, tracker) #, genome_gene_beds
 
     for chrom_name in chrom_data:
-        chr_tracker = MultiTracker("Identifying CNS on "+chrom_name,1,estimate=False,style="noProg")
+        chr_tracker = tracker.subTracker("Identifying CNS on "+chrom_name,1,estimate=False,style="noProg")
         chrom_out = os.path.join(out_folder,chrom_name+"_cns")
         make_dir(chrom_out)
         cns_maf = chrom_cns_identify(reference,
@@ -36,7 +39,10 @@ def identify(out_folder,
                                      min_seg_score,
                                      max_conservation_gap,
                                      min_site_score,
-                                     chr_tracker)
+                                     max_cns_N_ratio,
+                                     max_cns_gap_ratio,
+                                     chr_tracker,
+                                     cmd_env)
         chrom_data[chrom_name]["cns"] = cns_maf
     return {"chrom_data":chrom_data}
 
@@ -49,7 +55,10 @@ def chrom_cns_identify(reference,
                        min_seg_score,
                        max_conservation_gap,
                        min_site_score,
-                       tracker):
+                       max_cns_N_ratio,
+                       max_cns_gap_ratio,
+                       tracker,
+                       cmd_env):
 
     chrom = chrom_data[chrom_name]
 
@@ -60,8 +69,8 @@ def chrom_cns_identify(reference,
                                             parent=tracker,tracker_name="Format aligned MAF file")
 
     #maf_to_bed
-    info = "Convert aligned sequences to .bed:"
-    header_print(info)
+    #info = "Convert aligned sequences to .bed:"
+    #header_print(info)
     ref_seq_bed = os.path.join(chrom_out,"ref_seq.bed")
     chrom_seq_maf_handler.to_bed(ref_seq_bed,genome_name=reference,index_tag="original_index",
                                  parent=tracker,tracker_name="Convert aligned to BED")
@@ -69,16 +78,16 @@ def chrom_cns_identify(reference,
     #$bedtools subtract
     noncoding_bed_path = os.path.join(chrom_out,"aligned_noncoding_bed.bed")
     cmd = "bedtools subtract -a %s -b %s > %s" % (ref_seq_bed,reference_coding_bed,noncoding_bed_path)
-    call_command([cmd],shell=True,env=cmd_env,parent=chr_tracker,tracker_name="Subtract coding from aligned")
+    call_command([cmd],shell=True,env=cmd_env,parent=tracker,tracker_name="Subtract coding from aligned")
 
     #wiggle_to_bed
-    info = "Converting especially conserved regions in wiggle file to bed"
-    header_print(info)
+    #info = "Converting especially conserved regions in wiggle file to bed"
+    #header_print(info)
     best_conserved_bed = os.path.join(chrom_out,"best_conserved.bed")
     bcw = fhs.wig.Handler(chrom['chrom_conservation_wig'])
     bcw.to_bed(best_conserved_bed,
                genome=reference,
-               min_seg_length=min_cns_length,
+               min_seg_length=min_len,
                min_seg_score=min_seg_score,
                max_conservation_gap=max_conservation_gap,
                min_site_score=min_site_score,
@@ -88,11 +97,11 @@ def chrom_cns_identify(reference,
     #filter_bed_with_wiggle
     cns_bed = os.path.join(chrom_out,"cns.bed")
     cmd = "bedtools intersect -a %s -b %s > %s" % (noncoding_bed_path,best_conserved_bed,cns_bed)
-    call_command([cmd],shell=True,env=cmd_env,parent=chr_tracker,tracker_name="Intersect BEDs")
+    call_command([cmd],shell=True,env=cmd_env,parent=tracker,tracker_name="Intersect BEDs")
 
     #slice_maf_by_bed
-    info = "Slice multi-alignment file based on identified conserved non-coding regions:"
-    header_print(info)
+    #info = "Slice multi-alignment file based on identified conserved non-coding regions:"
+    #header_print(info)
     cns_maf = os.path.join(chrom_out,"cns.maf")
     chrom_seq_maf_handler.bed_intersect(bed           = cns_bed,
                                         path          = cns_maf,
@@ -100,7 +109,7 @@ def chrom_cns_identify(reference,
                                         index_tag     = "original_index",
                                         max_N_ratio   = max_cns_N_ratio,
                                         max_gap_ratio = max_cns_gap_ratio,
-                                        min_len       = min_cns_length,
+                                        min_len       = min_len,
                                         parent        = tracker,
                                         tracker_name  = "Slice MAF entries by CNS BED")
     return cns_maf
@@ -119,10 +128,10 @@ def create_genome_beds(out_folder, annotations, reference, coding_features, trac
     #gff3_to_bed
     ref_bed_tracker = tracker.subTracker("Extract reference CDS to .bed",1,estimate=False,style="noProg")
     reference_coding_bed = os.path.join(gb_out,"ref_coding.bed")
-    ref_gff_file = fhs.gff3(annotations[reference])
+    ref_gff_file = fhs.gff3.Handler(annotations[reference])
     ref_coding_bed_file = ref_gff_file.to_bed(reference_coding_bed,
                                               type_list = coding_features, 
-                                              sequence_prefix = reference+":")
+                                              genome = reference)
     ref_bed_tracker.done()
 
     # #gff3_to_bed
@@ -145,10 +154,10 @@ def config_identify(config_path):
     os.chdir(config_directory)
     identify_results = identify(**config)
     # combine results dict with config and output as JSON
-    results = identify_results.update(copy.deepcopy(config))
+    identify_results.update(copy.deepcopy(config))
     results_path = os.path.join(config_directory,"identify.results.json")
     with open(results_path,"w") as results_file:
-        json.dump(results,results_file,sort_keys=True,indent=4)
+        json.dump(identify_results,results_file,sort_keys=True,indent=4)
     os.chdir(original_wd)
     
 _cl_entry = config_identify #function that should be run on command line entry to this subcommand

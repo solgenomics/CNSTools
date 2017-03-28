@@ -17,6 +17,7 @@ class _Tracker(object):
             self._estimate = False
             self.running = False
             self.start_time = None
+            self.step_time = None
             self.pause_adjustment = 0 #stores the previously elapsed time when the tracker is paused.
             self._done = False
             self._auto_display = False
@@ -52,6 +53,7 @@ class _Tracker(object):
                 self.toggle() 
                 self._estimate = self._estimate_default
             self.steps += size
+            self.step_time = time.time() - self.start_time
             if self.steps>=self.size: self.done()
             return self
 
@@ -86,7 +88,7 @@ class _Tracker(object):
             if self._estimate and not self._done:
                 res+=" "*max(1,48-len(res)+ex)
                 elapsed = time.time() - self.start_time
-                estimate = elapsed/float(self.steps)*self.size - elapsed
+                estimate = self.step_time/float(self.steps)*self.size - elapsed
                 res+=self.yellow+_parseTime(estimate)+self.reset
                 ex += len(self.yellow+self.reset)
             res = ShStr(res)
@@ -200,8 +202,8 @@ class MultiTracker(_Tracker):
         
 
 def _parseTime(seconds):
-    if seconds < 60: return str(int(seconds))+"s"
-    elif seconds == float('inf'): return "???"
+    if seconds == float('inf') or seconds < 0: return "???"
+    elif seconds < 60: return str(int(seconds))+"s"
     elif seconds < 3600: return str(int(seconds/60))+"m."+_parseTime(seconds%60)
     elif seconds < 86400: return str(int(seconds/3600))+"h."+_parseTime(seconds%3600)
     else: return str(int(seconds/86400))+"d."+_parseTime(seconds%86400)

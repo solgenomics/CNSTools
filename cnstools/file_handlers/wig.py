@@ -15,40 +15,73 @@ class Entry(ah.Entry):
         lines = [info_line]+[str(val) for val in self.val_list]
         return lines
     def to_bed6_entries(self,min_seg_length=7,min_seg_score=0.82,max_conservation_gap=12,min_site_score=0.55):
-        regions = [[0,len(self.val_list)]]
         bed_entries = []
-        if len(self.val_list) >= max_conservation_gap:
-            start = 0
-            end = max_conservation_gap-1
-            below_rejec_score = [val<min_site_score for val in self.val_list[start:end]]
-            #scans for regions of at least the max_conservation_gap in which all scores are lower that the rejection score
-            #and cuts them out of the region
-            while end<regions[-1][1]:
-                below_rejec_score.append(self.val_list[end]<min_site_score)
-                end+=1
-                if all(below_rejec_score):
-                    while end<regions[-1][1] and self.val_list[end] < min_site_score:
-                        end+=1
-                    cut_region = regions.pop()
-                    regions.append([cut_region[0],start])
-                    regions.append([end,cut_region[1]])
-                    start = regions[-1][0]
-                    end = regions[-1][0]+max_conservation_gap-1
-                    below_rejec_score = [val<min_site_score for val in self.val_list[start:end]]
-                    if regions[-1][1]-regions[-1][0] < min_seg_length:
-                        break
-                below_rejec_score.pop(0)
-                start+=1
-        for region in sorted(regions):
-            region_sum = sum(val for val in self.val_list[region[0]:region[1]])
-            while region_sum < min_seg_score*(region[1]-region[0]) and region[1]-region[0] >= min_seg_length:
-                if self.val_list[region[1]-1]<self.val_list[region[0]]:
-                    region_sum -= self.val_list[region[1]-1]
-                    region[1] = region[1]-1
+        if len(self.val_list) >= min_seg_length:
+            #split into lists which are split by contiguous sections of size max_conservation_gap where every value is less than min_site_score
+            nogap_lists = [[]]
+            nogap_offsets = [0]
+            consv_gap_count = 0
+            for i in range(len(self.val_list)):
+                nogap_lists[-1].append(self.val_list[i])
+                if self.val_list[i]>=min_site_score:
+                    consv_gap_count = 0
                 else:
-                    region_sum -= self.val_list[region[0]]
-                    region[0] = region[0]+1
-            if region_sum >= min_seg_score*(region[1]-region[0]) and region[1]-region[0] >= min_seg_length:
+                    consv_gap_count += 1
+                if consv_gap_count>=max_conservation_gap:
+                    nogap_offsets.append(nogap_offsets[-1]+len(nogap_lists[-1]))
+                    nogap_lists.append([])
+                    consv_gap_count = 0
+
+            #identify contiguous regions where every value is greater than or equal to min_seg_score
+            regions = []
+            for nogap_list,nogap_offset in zip(nogap_lists,nogap_offsets):
+                i=0
+                while i < len(nogap_list):
+                    while i < len(nogap_list) and nogap_list[i]<min_seg_score:
+                        i+=1
+                    if not i < len(nogap_list):
+                        continue
+                    seg_start = i
+                    while i < len(nogap_list) and nogap_list[i]>=min_seg_score:
+                        i+=1
+                    seg_end = i
+                    regions.append([seg_start+nogap_offset,seg_end+nogap_offset])
+
+            #combine sequencial regions such that the resulting regions have >=min_seg_score average value.
+            regionsID = None
+            currID = tuple(i for pair in regions for i in pair)
+            direction = 1
+            while regionsID!=currID:
+                regions[:] = regions[::-1]
+                direction*=-1
+                for i in range(len(regions)-1,-1,-1):
+                    if i>0:
+                        tot_score = sum(self.val_list[regions[i-1][0]:regions[i][1]])/float(regions[i][1]-regions[i-1][0])
+                        if tot_score >= min_seg_score:
+                            regions[i-1:i+1] = ([regions[i-1][0],regions[i][1]],)
+                            continue
+                if direction==1:
+                    regionsID = currID
+                    currID = tuple(i for pair in regions for i in pair)
+
+            #expand regions so that they cover the most contiguous values without dropping below an average value >=min_seg_score
+            for reg in regions:
+                done = False
+                while not done:
+                    expand_left =  (sum(self.val_list[reg[0]-1:reg[1]])/float(reg[1]-(reg[0]-1)), (reg[0]-1,reg[1]))
+                    expand_right = (sum(self.val_list[reg[0]:reg[1]+1])/float(reg[1]+1-reg[0]), (reg[0],reg[1]+1))
+                    best_expansion = max(expand_left,expand_right)
+                    if (best_expansion[0]>=min_seg_score and
+                        best_expansion[1][0] >= 0 and self.val_list[best_expansion[1][0]]>=min_site_score and
+                        best_expansion[1][1] < len(self.val_list) and self.val_list[best_expansion[1][1]]>=min_site_score):
+                        reg[:] = best_expansion[1]
+                    else:
+                        done = True
+            # remove any regions too short to qualify
+            regions[:] = (reg for reg in regions if reg[1]-reg[0]>=min_seg_length)
+            #convert to bed
+            for region in regions:
+                region_sum = sum(self.val_list[region[0]:region[1]])
                 bed_entries.append(bed6.Entry(self.chrom, self.start+region[0], self.start+region[1], name=str(region_sum/float(region[1]-region[0])), score=(region[1]-region[0]), strand="+"))
         return bed_entries
 

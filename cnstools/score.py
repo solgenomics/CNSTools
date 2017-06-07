@@ -64,7 +64,7 @@ def score(reference,
             roast_commandlists.append(["roast",'E="%s"'%chrom,"X=0", chr_tree, file_glob, outfile])
             roast_files[chrom] = os.path.join(out_folder,outfile)
     random.shuffle(roast_commandlists)
-    #call_commands_async(roast_commandlists,num_processes,shell=True,parent=tracker,tracker_name="ROAST",env=cmd_env) #runs commands asynchronously with a maximum simultanious process count
+    call_commands_async(roast_commandlists,num_processes,shell=True,parent=tracker,tracker_name="ROAST",env=cmd_env) #runs commands asynchronously with a maximum simultanious process count
     os.chdir(currentwd)
 
     msa_format_tracker = tracker.subTracker("Format MAFs for msa_view",len(roast_files),estimate=True,style="fraction")
@@ -145,7 +145,7 @@ def score(reference,
         phast_opts = ["--target-coverage","0.25","--expected-length","12","--rho","0.4"]
         phast_command = ["phastCons"]+phast_opts+["--estimate-rho",e_rho_tree_folder, "--msa-format","MAF",maf_name,temp_model,"--most-conserved", bed_out,"--score","--seqname",chrom,">",wig_out]
         phastcons_commandlists.append(create_model+[";"]+phast_command+[";"]+delete_model)
-    #call_commands_async(phastcons_commandlists,num_processes,shell=True,parent=tracker,tracker_name="Running PhastCons",env=cmd_env)
+    call_commands_async(phastcons_commandlists,num_processes,shell=True,parent=tracker,tracker_name="Running PhastCons",env=cmd_env)
     
     results = {}
     results["chrom_data"] = {chrom:{"chrom_seq_maf":roast_files[chrom],

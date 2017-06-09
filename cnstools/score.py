@@ -228,7 +228,7 @@ def config_score(config_path):
     os.chdir(config_directory)
     score_results = score(**config)
     # combine results dict with config and output as JSON
-    score_results.update(copy.deepcopy(config))
+    score_results = copy.deepcopy(config).update(score_results)
     results_path = os.path.join(config_directory,"score.results.json")
     with open(results_path,"w") as results_file:
         json.dump(score_results,results_file,sort_keys=True,indent=4)

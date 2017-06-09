@@ -1,4 +1,4 @@
-import os, json
+import os, json, copy
 from ._utils import MultiTracker, make_dir, call_command
 import file_handlers as fhs
 
@@ -44,6 +44,7 @@ def identify(out_folder,
                                      chr_tracker,
                                      cmd_env)
         chrom_data[chrom_name]["cns"] = cns_maf
+        tracker.step()
     return {"chrom_data":chrom_data}
 
 def chrom_cns_identify(reference,
@@ -112,6 +113,7 @@ def chrom_cns_identify(reference,
                                         min_len       = min_len,
                                         parent        = tracker,
                                         tracker_name  = "Slice MAF entries by CNS BED")
+    tracker.done()
     return cns_maf
 
 def _maf_format(reference):
@@ -154,7 +156,7 @@ def config_identify(config_path):
     os.chdir(config_directory)
     identify_results = identify(**config)
     # combine results dict with config and output as JSON
-    identify_results.update(copy.deepcopy(config))
+    identify_results = copy.deepcopy(config).update(identify_results)
     results_path = os.path.join(config_directory,"identify.results.json")
     with open(results_path,"w") as results_file:
         json.dump(identify_results,results_file,sort_keys=True,indent=4)

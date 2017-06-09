@@ -1,4 +1,4 @@
-import os, json
+import os, json, copy
 import file_handlers as fhs
 
 def analyze(out, analyses, align=None,score=None,identify=None):

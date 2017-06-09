@@ -140,7 +140,7 @@ def config_align(config_path):
     os.chdir(config_directory)
     align_results = align(**config)
     # combine results dict with config and output as JSON
-    align_results.update(copy.deepcopy(config))
+    align_results = copy.deepcopy(config).update(align_results)
     print align_results
     results_path = os.path.join(config_directory,"align.results.json")
     with open(results_path,"w") as results_file:

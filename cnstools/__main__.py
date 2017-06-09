@@ -7,7 +7,6 @@ import _utils
 import argparse
 
 def main():
-
     program_dict = {}
     for module in cnstools.__all__:
         program_dict[module] = getattr(cnstools,module)
@@ -20,7 +19,7 @@ def main():
 
     args = main_parser.parse_args(sys.argv[1:])
 
-    _utils.header_print("Running %s..."%args.program,h_type=3)
+    #_utils.header_print("Running %s..."%args.program,h_type=3)
 
     program_to_run = args.program
     del args.program

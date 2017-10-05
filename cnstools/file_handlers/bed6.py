@@ -34,6 +34,6 @@ class Handler(ah.Handler):
                     if len(fields)<6:
                         fields.append([None]*(6-len(fields)))
                     fields[:] = [item if item!='.' else None for item in fields]
-                    yield Entry(*fields)
+                    yield Entry(*(fields[:6]))
             if tracker_name:
                 tracker.done()

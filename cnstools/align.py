@@ -128,6 +128,7 @@ def align(reference, # ex:"A"
         results["aligned_query_genomes"][query_genome_name] = maf_files
         gen_tracker.done()
 
+    tracker.done()
     tracker.freeze()
     return results
 
@@ -140,11 +141,11 @@ def config_align(config_path):
     os.chdir(config_directory)
     align_results = align(**config)
     # combine results dict with config and output as JSON
-    align_results = copy.deepcopy(config).update(align_results)
-    print align_results
+    final_results = copy.deepcopy(config)
+    final_results.update(align_results)
     results_path = os.path.join(config_directory,"align.results.json")
     with open(results_path,"w") as results_file:
-        json.dump(align_results,results_file,sort_keys=True,indent=4)
+        json.dump(final_results,results_file,sort_keys=True,indent=4)
     os.chdir(original_wd)
 
 _cl_entry = config_align #function that should be run on command line entry to this subcommand

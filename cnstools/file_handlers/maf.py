@@ -197,6 +197,7 @@ def _to_bed_entry(genome_name=None,index_tag=None):
         if func.genome_name==None: 
             func.genome_name = entry.sequences[0].src.split(":")[0].strip()
         seq_to_convert = (seq for seq in entry.sequences if seq.src.split(":")[0].strip()==func.genome_name)
+        new_entry = False
         for sequence in seq_to_convert:
             id_string = "%s=%s" % (func.index_tag,func.index) if func.index_tag!=None else None
             func.index+=1

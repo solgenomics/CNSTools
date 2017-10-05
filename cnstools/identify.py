@@ -45,6 +45,8 @@ def identify(out_folder,
                                      cmd_env)
         chrom_data[chrom_name]["cns"] = cns_maf
         tracker.step()
+    tracker.done()
+    tracker.freeze()
     return {"chrom_data":chrom_data}
 
 def chrom_cns_identify(reference,
@@ -93,10 +95,10 @@ def chrom_cns_identify(reference,
                max_conservation_gap=max_conservation_gap,
                min_site_score=min_site_score,
                parent=tracker,
-               tracker_name="Convert conserved to BED")
+               tracker_name="Identify conserved regions")
 
     #filter_bed_with_wiggle
-    cns_bed = os.path.join(chrom_out,"cns.bed")
+    cns_bed = os.path.join(chrom_out,"cns_unfiltered.bed")
     cmd = "bedtools intersect -a %s -b %s > %s" % (noncoding_bed_path,best_conserved_bed,cns_bed)
     call_command([cmd],shell=True,env=cmd_env,parent=tracker,tracker_name="Intersect BEDs")
 
@@ -104,6 +106,7 @@ def chrom_cns_identify(reference,
     #info = "Slice multi-alignment file based on identified conserved non-coding regions:"
     #header_print(info)
     cns_maf = os.path.join(chrom_out,"cns.maf")
+    cns_filtered_bed = os.path.join(chrom_out,"cns.bed")
     chrom_seq_maf_handler.bed_intersect(bed           = cns_bed,
                                         path          = cns_maf,
                                         genome_name   = reference,
@@ -112,7 +115,13 @@ def chrom_cns_identify(reference,
                                         max_gap_ratio = max_cns_gap_ratio,
                                         min_len       = min_len,
                                         parent        = tracker,
-                                        tracker_name  = "Slice MAF entries by CNS BED")
+                                        tracker_name  = "Slice MAF by CNS regions")
+    cns_maf_handler = fhs.maf.Handler(cns_maf)
+    cns_maf_handler.to_bed(cns_filtered_bed,
+                           genome_name=reference,
+                           index_tag="cns.maf_index",
+                           parent=tracker,
+                           tracker_name="Convert notable regions back to CNS")
     tracker.done()
     return cns_maf
 
@@ -156,10 +165,11 @@ def config_identify(config_path):
     os.chdir(config_directory)
     identify_results = identify(**config)
     # combine results dict with config and output as JSON
-    identify_results = copy.deepcopy(config).update(identify_results)
+    final_results = copy.deepcopy(config)
+    final_results.update(identify_results)
     results_path = os.path.join(config_directory,"identify.results.json")
     with open(results_path,"w") as results_file:
-        json.dump(identify_results,results_file,sort_keys=True,indent=4)
+        json.dump(final_results,results_file,sort_keys=True,indent=4)
     os.chdir(original_wd)
     
 _cl_entry = config_identify #function that should be run on command line entry to this subcommand
